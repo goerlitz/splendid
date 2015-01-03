@@ -1,7 +1,7 @@
 package splendid
 
-import scalaj.http.Http
-import scalaj.http.HttpOptions
+//import scalaj.http.Http
+//import scalaj.http.HttpOptions
 import org.openrdf.repository.sparql.SPARQLRepository
 import org.openrdf.query.QueryLanguage
 import org.openrdf.query.TupleQueryResult
