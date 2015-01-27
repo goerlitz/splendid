@@ -32,100 +32,103 @@ class ParallelHashJoinSpec(_system: ActorSystem) extends TestKit(_system)
     system.awaitTermination(10 seconds)
   }
 
-  val left = TestActorRef(Props[OperatorNode], "left")
-  val right = TestActorRef(Props[OperatorNode], "right")
-  val listener = TestActorRef[ResultSet](Props[ResultSet], "listener")
+  /**
+   * Defines fixtures for every test.
+   */
+  trait ActorSetup {
+    val leftSource = TestActorRef(Props[OperatorNode])
+    val rightSource = TestActorRef(Props[OperatorNode])
+    val collector = TestActorRef[ResultSet](Props[ResultSet])
 
-  "A ParallelHashJoin" should "throw IllegalArgumentException if BindingSet is empty" in {
+    val fac = new ValueFactoryImpl
 
-    val join = ParallelHashJoin(Set("x"), left, right, listener)
+    def bindings(tuples: (String, Any)*): BindingSet = {
+      val (names, values) = tuples.unzip
+      new ListBindingSet(names.toList, values.map { x => fac.createLiteral(x.toString) })
+    }
+  }
+  
+
+  "A ParallelHashJoin" should "throw IllegalArgumentException if BindingSet is empty" in new ActorSetup {
+
+    val join = ParallelHashJoin(Set("x"), leftSource, rightSource, collector)
 
     intercept[IllegalArgumentException] {
-      join.handle(left, EmptyBindingSet.getInstance)
+      join.handle(leftSource, EmptyBindingSet.getInstance)
     }
   }
 
-  it should "throw IllegalArgumentException if BindingSet has wrong join variables" in {
+  it should "throw IllegalArgumentException if BindingSet has wrong join variables" in new ActorSetup {
 
-    val join = ParallelHashJoin(Set("x"), left, right, listener)
+    val join = ParallelHashJoin(Set("x"), leftSource, rightSource, collector)
 
     intercept[IllegalArgumentException] {
-      join.handle(left, Binder.literal("y" -> 1))
+      join.handle(leftSource, bindings("y" -> 1))
     }
   }
 
-  it should "return correct BindingSets for one join variable" in {
+  it should "return correct BindingSets for one join variable" in new ActorSetup {
 
-    val join = ParallelHashJoin(Set("x"), left, right, listener)
+    val join = ParallelHashJoin(Set("x"), leftSource, rightSource, collector)
 
-    val results = listener.underlyingActor
+    val target = collector.underlyingActor
 
-    results.results.clear()
-    assert(results.results.size == 0)
+    assertResult(0, "entries in result set")(target.results.size)
     
-    join.handle(left, Binder.literal("x" -> 1, "z" -> 3))
-    join.handle(left, Binder.literal("x" -> 1, "z" -> 4))
-    join.handle(left, Binder.literal("x" -> 2, "z" -> 3))
-    join.handle(right, Binder.literal("x" -> 1, "y" -> 2))
+    join.handle(leftSource, bindings("x" -> 1, "z" -> 3))
+    join.handle(leftSource, bindings("x" -> 1, "z" -> 4))
+    join.handle(leftSource, bindings("x" -> 2, "z" -> 3))
+    join.handle(rightSource, bindings("x" -> 1, "y" -> 2))
     
-    assert(results.results.size == 2)
-    assert(results.results.contains(Binder.literal("x" -> 1, "y" -> 2, "z" -> 3)))
-    assert(results.results.contains(Binder.literal("x" -> 1, "y" -> 2, "z" -> 4)))
+    assertResult(2, "entries in result set")(target.results.size)
+    assert(target.results.contains(bindings("x" -> 1, "y" -> 2, "z" -> 3)))
+    assert(target.results.contains(bindings("x" -> 1, "y" -> 2, "z" -> 4)))
   }
   
-  it should "return correct BindingSets for two join variables" in {
+  it should "return correct BindingSets for two join variables" in new ActorSetup {
 
-    val join = ParallelHashJoin(Set("x", "y"), left, right, listener)
+    val join = ParallelHashJoin(Set("x", "y"), leftSource, rightSource, collector)
 
-    val results = listener.underlyingActor
+    val results = collector.underlyingActor
     
-    results.results.clear()
-    assert(results.results.size == 0)
+    assertResult(0, "entries in result set")(results.results.size)
     
-    join.handle(left, Binder.literal("x" -> 1, "y" -> 1, "z" -> 3))
-    join.handle(left, Binder.literal("x" -> 1, "y" -> 2, "z" -> 4))
-    join.handle(right, Binder.literal("x" -> 1, "y" -> 2, "a" -> 0))
+    join.handle(leftSource, bindings("x" -> 1, "y" -> 1, "z" -> 3))
+    join.handle(leftSource, bindings("x" -> 1, "y" -> 2, "z" -> 4))
+    join.handle(rightSource, bindings("x" -> 1, "y" -> 2, "a" -> 0))
     
-    assert(results.results.size == 1)
-    assert(results.results.contains(Binder.literal("a" -> 0, "x" -> 1, "y" -> 2, "z" -> 4)))
+    assertResult(1, "entries in result set")(results.results.size)
+    assert(results.results.contains(bindings("a" -> 0, "x" -> 1, "y" -> 2, "z" -> 4)))
   }
   
-  it should "return the cross product for no join variables" in {
+  it should "return the cross product for no join variables" in new ActorSetup {
 
-    val join = ParallelHashJoin(Set(), left, right, listener)
+    val join = ParallelHashJoin(Set(), leftSource, rightSource, collector)
 
-    val results = listener.underlyingActor
+    val target = collector.underlyingActor
     
-    results.results.clear()
-    assert(results.results.size == 0)
+    assertResult(0, "entries in result set")(target.results.size)
     
-    join.handle(left, Binder.literal("x" -> 1, "y" -> 1))
-    join.handle(left, Binder.literal("x" -> 1))
-    join.handle(right, Binder.literal("a" -> 1, "b" -> 2))
-    join.handle(right, Binder.literal("a" -> 1))
+    join.handle(leftSource, bindings("x" -> 1, "y" -> 1))
+    join.handle(leftSource, bindings("x" -> 1))
+    join.handle(rightSource, bindings("a" -> 1, "b" -> 2))
+    join.handle(rightSource, bindings("a" -> 1))
     
-    assert(results.results.size == 4)
-    assert(results.results.contains(Binder.literal("a" -> 1, "b" -> 2, "x" -> 1, "y" -> 1)))
-    assert(results.results.contains(Binder.literal("a" -> 1, "b" -> 2, "x" -> 1)))
-    assert(results.results.contains(Binder.literal("a" -> 1, "x" -> 1, "y" -> 1)))
-    assert(results.results.contains(Binder.literal("a" -> 1, "x" -> 1)))
+    assertResult(4, "entries in result set")(target.results.size)
+    assert(target.results.contains(bindings("a" -> 1, "b" -> 2, "x" -> 1, "y" -> 1)))
+    assert(target.results.contains(bindings("a" -> 1, "b" -> 2, "x" -> 1)))
+    assert(target.results.contains(bindings("a" -> 1, "x" -> 1, "y" -> 1)))
+    assert(target.results.contains(bindings("a" -> 1, "x" -> 1)))
   }
 }
 
-object Binder {
-
-  def fac = new ValueFactoryImpl
-
-  def literal(tuples: (String, Any)*): BindingSet = {
-    val (names, values) = tuples.unzip
-    new ListBindingSet(names.toList, values.map { x => fac.createLiteral(x.toString) })
-  }
-}
-
+/**
+ * A result collector.
+ */
 class ResultSet extends Actor {
-  
+
   val results = scala.collection.mutable.Set[BindingSet]()
-  
+
   def receive = {
     case TupleResult(bindings) => {
       results.add(bindings)
