@@ -52,6 +52,22 @@ class ProjectionSpec(_system: ActorSystem) extends TestKit(_system)
     
     assertResult(1, "entries in result set")(target.results.size)
     assert(target.results.contains(bindings("x" -> 1)))
+    
+    projection.handle(source, bindings("a" -> 1, "b" -> 2))
+        
+    assertResult(1, "entries in result set")(target.results.size)    
+  }
+  
+  it should "not produce empty bindings" in new ActorSetup {
+    val projection = new ProjectionImpl(Set("x"), source, collector)
+    
+    val target = collector.underlyingActor
+
+    assertResult(0, "entries in result set")(target.results.size)
+    
+    projection.handle(source, bindings("a" -> 1, "b" -> 2))
+        
+    assertResult(0, "entries in result set")(target.results.size)    
   }
 
 }
