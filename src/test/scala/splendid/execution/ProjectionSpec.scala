@@ -25,7 +25,7 @@ class ProjectionSpec(_system: ActorSystem) extends TestKit(_system)
 
   override def afterAll: Unit = {
     system.shutdown()
-    system.awaitTermination(10 seconds)
+    system.awaitTermination(10.seconds)
   }
 
   trait ActorSetup {

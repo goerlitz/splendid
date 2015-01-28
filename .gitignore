@@ -11,11 +11,12 @@ lib_managed/
 src_managed/
 project/boot/
 project/plugins/project/
+project/*
 
 # Scala-IDE specific
+.cache
+.classpath
+.project
 .scala_dependencies
 .worksheet
 /bin/
-/.project
-/.classpath
-/.cache

@@ -26,7 +26,7 @@ class ParallelHashJoin(joinVars: Set[String], left: ActorRef, right: ActorRef, p
     }
 
     // get variable bindings of join variables
-    val joinVals = (for (b <- bindings if joinVars.contains(b.getName)) yield (b.getName -> b.getValue)) toMap
+    val joinVals = { for (b <- bindings if joinVars.contains(b.getName)) yield (b.getName -> b.getValue) }.toMap
 
     // determine map references depending on sender
     val (ownMap, otherMap) = sender match {
