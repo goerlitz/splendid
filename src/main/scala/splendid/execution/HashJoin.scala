@@ -10,60 +10,63 @@ import splendid.Result
 import splendid.Setup
 import org.openrdf.query.algebra.evaluation.QueryBindingSet
 
+/**
+ * A simple symmetric hash join implementation.
+ * 
+ * @author Olaf Goerlitz
+ */
 class HashJoin(joinVars: Seq[String], left: ActorRef, right: ActorRef) extends Actor with ActorLogging {
 
   import context._
 
-  val leftBindings = collection.mutable.Map[Seq[Value], BindingSet]()
-  val rightBindings = collection.mutable.Map[Seq[Value], BindingSet]()
+  val leftBindings = collection.mutable.Map[Seq[Value], List[BindingSet]]()
+  val rightBindings = collection.mutable.Map[Seq[Value], List[BindingSet]]()
 
   def receive = {
+    // initialize with parent reference
     case Setup(parent) => {
       left ! Setup(self)
       right ! Setup(self)
       become(initialized(parent))
-      println(s"Initialized actor with parent: $parent")
+      log.info(s"Initialized actor with parent: $parent")
     }
-    case _ => log.warning("actor has not been initialized $this")
+    case _ => throw new IllegalStateException(s"actor has not been initialized yet $this")
+      //log.warning("actor has not been initialized $this")
   }
 
   def initialized(parent: ActorRef): Receive = {
-    case Result(bs) => sender match {
-      case `left` => {
-        log.info(s"got result $bs from left child (joinVars is $joinVars)")
-        val values = joinVars.map { x => bs.getBinding(x).getValue }
-        val result = handle(values, rightBindings)
-        result match {
-          case Some(resultBS) => {
-            resultBS.addAll(bs)
-//            log.info(s"found matching right binding $resultBS")
-            parent ! Result(resultBS)
-          }
-          case None =>
-        }
-        // store bindings
-        leftBindings += values -> bs
+    // process results depending on sender
+    case Result(newResult) => {
+
+      // get variable bindings of join variables
+      val joinValues = joinVars.map { x => newResult.getBinding(x).getValue }
+
+      // determine map references depending on sender
+      val (ownMap, otherMap) = sender match {
+        case `left`  => (leftBindings, rightBindings)
+        case `right` => (rightBindings, leftBindings)
+        case _ => throw new IllegalArgumentException("IllegalSender")
       }
-      case `right` => {
-        log.info(s"got result $bs from right child (joinVars is $joinVars)")
-        val values = joinVars.map { x => bs.getBinding(x).getValue }
-        val result = handle(values, leftBindings)
-        result match {
-          case Some(resultBS) => {
-            resultBS.addAll(bs)
-//            log.info(s"found matching left binding $resultBS")
-            parent ! Result(resultBS)
-          }
-          case None =>
-        }
-        rightBindings += values -> bs
+
+      // find matching tuples from other result set
+      otherMap.get(joinValues) match {
+        case Some(bindings) => for (otherResult <- bindings) parent ! Result(join(newResult, otherResult))
+        case None           => // no results
       }
-      case _ => log.warning("got result $bs from unknown sender $sender")
+
+      // save new result tuple
+      ownMap.get(joinValues) match {
+        case Some(bindings) => ownMap.put(joinValues, newResult :: bindings)
+        case None           => ownMap.put(joinValues, List(newResult))
+      }
     }
     case _ => log.warning("got unknown message")
   }
 
-  def handle(values: Seq[Value], other: collection.mutable.Map[Seq[Value], BindingSet]) = {
-    for (bla <- other.get(values)) yield new QueryBindingSet(bla)
+  def join(firstBinding: BindingSet, secondBinding: BindingSet): BindingSet = {
+    val result = new QueryBindingSet(firstBinding)
+    result.addAll(secondBinding)
+    return result
   }
+
 }

@@ -11,9 +11,11 @@ import akka.actor.ActorSystem
 import akka.actor.Props
 import akka.actor.ActorLogging
 import collection.JavaConversions._
+import akka.actor.ActorRef
 
 case class Query(query: String)
 case class Result(bs: BindingSet)
+case class Setup(parent: ActorRef)
 case object Init
 case object Done
 

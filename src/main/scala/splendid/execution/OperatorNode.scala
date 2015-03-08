@@ -31,13 +31,13 @@ class OperatorNode extends Actor with ActorLogging {
     case TupleExprOp(expr, bindings) => expr match {
       case projection: Projection => handle(projection, bindings)
       case join: Join => handle(join, bindings)
-      case service: Service => {
-
-      }
-
-      case union: Union => {
-
-      }
+//      case service: Service => {
+//
+//      }
+//
+//      case union: Union => {
+//
+//      }
 
       case x => log.warning(s"unknown expression " + x.getClass)
     }
