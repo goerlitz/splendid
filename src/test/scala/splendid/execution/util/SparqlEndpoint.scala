@@ -38,6 +38,9 @@ class SparqlEndpoint(port: Int) {
 
   // disable verbose logging in Restlet engine
   Engine.setLogLevel(Level.WARNING)
+  
+  // prevent LinkedDataServer (SparqlResource) from logging to System.err
+  System.err.close()
 
   def start(): Unit = {
     server.start()

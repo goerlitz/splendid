@@ -3,8 +3,6 @@ package splendid.execution
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
-import scala.util.Failure
-import scala.util.Success
 
 import org.openrdf.query.QueryLanguage
 import org.openrdf.query.TupleQueryResult
@@ -13,9 +11,10 @@ import org.openrdf.repository.sparql.SPARQLRepository
 
 import akka.actor.Actor
 import akka.actor.ActorLogging
+import akka.actor.Status.Failure
 import akka.pattern.pipe
-import splendid.Done
 import splendid.Result
+import splendid.execution.Execution.Done
 
 case class SparqlQuery(endpoint: String, query: String)
 
@@ -83,8 +82,8 @@ class RemoteQuery extends Actor with ActorLogging {
       result.close()
       client.close()
       context.parent ! Done
-    case Failure(err) => println("err: {}", err) // TODO propagate error
-    case _ => // TODO ignore or send error message
+    case Failure(err: Throwable) => context.parent ! Execution.Error(err)
+    case x => println(s"IGNORING: $x")// TODO ignore or send error message
   }
 
 }

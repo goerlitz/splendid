@@ -2,6 +2,7 @@ package splendid.execution
 
 import java.net.URI
 
+import org.openrdf.query.QueryEvaluationException
 import org.openrdf.rio.RDFFormat
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FlatSpecLike
@@ -12,9 +13,10 @@ import akka.actor.ActorSystem
 import akka.actor.Props
 import akka.testkit.ImplicitSender
 import akka.testkit.TestKit
-import splendid.Done
 import splendid.Result
 import splendid.common.RDF
+import splendid.execution.Execution.Done
+import splendid.execution.Execution.Error
 import splendid.execution.util.SparqlEndpoint
 import splendid.execution.util.SparqlResult
 
@@ -26,9 +28,9 @@ import splendid.execution.util.SparqlResult
  */
 class RemoteQuerySpec(_system: ActorSystem) extends TestKit(_system)
   with FlatSpecLike with BeforeAndAfterAll with ImplicitSender {
-  
-  def this() = this(ActorSystem("RemoteQuerySpec"))
 
+  def this() = this(ActorSystem("RemoteQuerySpec"))
+  
   // example RDF data from http://www.w3.org/TR/turtle/
   val DataTTL = """
 			| @base <http://example.org/> .
@@ -62,15 +64,14 @@ class RemoteQuerySpec(_system: ActorSystem) extends TestKit(_system)
   }
 
   "A remote SPARQL query" must "return the expected results" in {
-    
+
     val query = "SELECT DISTINCT ?p WHERE { [] ?p [] } ORDER BY ?p"
     val expectedPredicates = Seq(
       "http://www.perceive.net/schemas/relationship/enemyOf",
       "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
       "http://xmlns.com/foaf/0.1/name")
 
-    val parentProps = Props(new FosterParent(Props[RemoteQuery], testActor))
-    val fosterNode = system.actorOf(parentProps, "foster_parent")
+    val fosterNode = system.actorOf(Props(new FosterParent(Props[RemoteQuery], testActor)))
 
     fosterNode ! SparqlQuery(EndpointUri.toString(), query)
 
@@ -80,10 +81,37 @@ class RemoteQuerySpec(_system: ActorSystem) extends TestKit(_system)
     }
     expectMsg(Done)
   }
-  
-  // TODO add test for empty result set
-  
-  // TODO add test for failure cases: wrong SPARQL endpoint, wrong SPARQL query
+
+  "A non-matching SPARQL query" must "return an empty result" in {
+    val query = "SELECT ?s WHERE { ?s a <http://example.org/Nothing> }"
+
+    val fosterNode = system.actorOf(Props(new FosterParent(Props[RemoteQuery], testActor)))
+
+    fosterNode ! SparqlQuery(EndpointUri.toString(), query)
+
+    expectMsg(Done)
+  }
+
+  "A malformed SPARQL query" must "return an error" in {
+    val query = "SELECT * WHERE { subject a Nothing }"
+
+    val parentProps = Props(new FosterParent(Props[RemoteQuery], testActor))
+    val fosterNode = system.actorOf(parentProps)
+
+    fosterNode ! SparqlQuery(EndpointUri.toString(), query)
+
+    expectMsgPF() { case Error(e: QueryEvaluationException) => () }
+  }
+
+  "An invalid SPARQL endpoint definition" must "return an error" in {
+    val query = "SELECT ?s WHERE { ?s a <http://example.org/Nothing> }"
+
+    val fosterNode = system.actorOf(Props(new FosterParent(Props[RemoteQuery], testActor)))
+
+    fosterNode ! SparqlQuery("http://loclahost:1", query)
+    
+    expectMsgPF() { case Error(e: QueryEvaluationException) => () }
+  }
 
 }
 
