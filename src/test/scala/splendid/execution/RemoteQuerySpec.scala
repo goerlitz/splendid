@@ -2,6 +2,8 @@ package splendid.execution
 
 import java.net.URI
 
+import scala.concurrent.duration.DurationInt
+
 import org.openrdf.query.QueryEvaluationException
 import org.openrdf.rio.RDFFormat
 import org.scalatest.BeforeAndAfterAll
@@ -30,7 +32,7 @@ class RemoteQuerySpec(_system: ActorSystem) extends TestKit(_system)
   with FlatSpecLike with BeforeAndAfterAll with ImplicitSender {
 
   def this() = this(ActorSystem("RemoteQuerySpec"))
-  
+
   // example RDF data from http://www.w3.org/TR/turtle/
   val DataTTL = """
 			| @base <http://example.org/> .
@@ -61,6 +63,7 @@ class RemoteQuerySpec(_system: ActorSystem) extends TestKit(_system)
   override def afterAll(): Unit = {
     testEndpoint.stop()
     system.shutdown()
+    system.awaitTermination(10.seconds)
   }
 
   "A remote SPARQL query" must "return the expected results" in {
@@ -109,7 +112,7 @@ class RemoteQuerySpec(_system: ActorSystem) extends TestKit(_system)
     val fosterNode = system.actorOf(Props(new FosterParent(Props[RemoteQuery], testActor)))
 
     fosterNode ! SparqlQuery("http://loclahost:1", query)
-    
+
     expectMsgPF() { case Error(e: QueryEvaluationException) => () }
   }
 

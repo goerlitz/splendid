@@ -1,72 +1,21 @@
 package splendid.execution
 
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.concurrent.Promise
-
-import org.openrdf.query.QueryLanguage
 import org.openrdf.query.TupleQueryResult
-import org.openrdf.repository.RepositoryException
-import org.openrdf.repository.sparql.SPARQLRepository
 
 import akka.actor.Actor
 import akka.actor.ActorLogging
+import akka.actor.ActorSystem
+import akka.actor.Props
 import akka.actor.Status.Failure
 import akka.pattern.pipe
 import splendid.Result
 import splendid.execution.Execution.Done
+import splendid.execution.util.EndpointClient
+import splendid.execution.util.SparqlEndpointClient
 
 case class SparqlQuery(endpoint: String, query: String)
 
 case class SparqlTupleResult(client: SparqlEndpointClient, result: TupleQueryResult)
-
-trait SparqlEndpointClient {
-  def evalTupleQuery(query: String)(implicit exec: ExecutionContext): Future[SparqlTupleResult]
-  def close(): Unit
-}
-
-// TODO check if the HTTP client can be reused for consecutive queries to the same SPARQL endpoint
-class EndpointClient(uri: String) extends SparqlEndpointClient {
-
-  val repo = new SPARQLRepository(uri);
-
-  override def evalTupleQuery(query: String)(implicit exec: ExecutionContext): Future[SparqlTupleResult] = {
-
-    val promise = Promise[SparqlTupleResult]
-
-    // async tuple query evaluation
-    Future {
-      try {
-        repo.initialize()
-        val con = repo.getConnection()
-
-        try {
-          // TODO check if use result handler gives better performance
-          val result = con.prepareTupleQuery(QueryLanguage.SPARQL, query, null).evaluate()
-          promise.success(SparqlTupleResult(this, result))
-        } catch {
-          case t: Throwable =>
-            con.close()
-            repo.shutDown()
-            promise.failure(t)
-        }
-
-      } catch {
-        case re: RepositoryException =>
-          repo.shutDown()
-          promise.failure(re)
-      }
-    }
-
-    promise.future
-  }
-
-  override def close(): Unit = repo.shutDown()
-}
-
-object EndpointClient {
-  def apply(uri: String): EndpointClient = new EndpointClient(uri)
-}
 
 // TODO add SPARQL endpoint client as parameter to allow for better unit testing
 class RemoteQuery extends Actor with ActorLogging {
@@ -83,7 +32,7 @@ class RemoteQuery extends Actor with ActorLogging {
       client.close()
       context.parent ! Done
     case Failure(err: Throwable) => context.parent ! Execution.Error(err)
-    case x => println(s"IGNORING: $x")// TODO ignore or send error message
+    case x                       => println(s"IGNORING: $x") // TODO ignore or send error message
   }
 
 }
