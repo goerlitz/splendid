@@ -25,9 +25,9 @@ libraryDependencies ++= Seq(
   "org.scalatest"     %% "scalatest"    % "2.2.4"  % "test",
   
   // 3rd party
-  "org.openrdf.sesame"       % "sesame-runtime"     % "2.8.1",
+  "org.openrdf.sesame"       % "sesame-runtime"     % "2.8.3",
   "net.fortytwo.sesametools" % "linked-data-server" % "1.9",
-  
-  "commons-logging" % "commons-logging-api" % "1.1",
+
+  // logging
   "org.slf4j"       % "slf4j-simple"        % "1.7.12"
 )
