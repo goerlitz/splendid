@@ -1,27 +1,26 @@
 package splendid.execution.util
 
 import java.util.concurrent.TimeoutException
+
 import scala.concurrent.Await
-import scala.concurrent.duration.Duration
-import scala.concurrent.duration.DurationInt
+import scala.concurrent.Future
+import scala.concurrent.duration.DurationDouble
 import scala.language.postfixOps
+
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FlatSpecLike
 import org.scalatest.Matchers
+
 import akka.actor.ActorSystem
-import akka.actor.Props
 import akka.pattern.ask
 import akka.testkit.ImplicitSender
+import akka.testkit.TestActorRef
 import akka.testkit.TestKit
 import akka.util.Timeout
-import scala.concurrent.Future
-import akka.testkit.TestActorRef
-import scala.util.Success
-import scala.util.Failure
 
 /**
  * Testing various conditions of the ResultCollector, including empty result set, postponed messages, and handling of tell and ask messages.
- * 
+ *
  * @author Olaf Goerlitz
  */
 class ResultCollectorSpec extends TestKit(ActorSystem("IterationTest")) with FlatSpecLike with Matchers with BeforeAndAfterAll with ImplicitSender {
@@ -32,7 +31,7 @@ class ResultCollectorSpec extends TestKit(ActorSystem("IterationTest")) with Fla
   override def afterAll = system.shutdown()
 
   private def expectTimeout(f: Future[Any]): Future[Any] = {
-    intercept[TimeoutException] { Await.result(f, 1 second) }
+    intercept[TimeoutException] { Await.result(f, 0.3 seconds) }
     f
   }
 
@@ -43,9 +42,12 @@ class ResultCollectorSpec extends TestKit(ActorSystem("IterationTest")) with Fla
     case e: Throwable => e shouldBe a[NoSuchElementException]
     case x            => throw new UnsupportedOperationException(s"$x")
   }
+  
+  trait TestActor {
+    val actorRef = TestActorRef(ResultCollector())
+  }
 
-  "An empty result" should "return false for !HasNext" in {
-    val actorRef = TestActorRef(new ResultCollector())
+  "A ResultCollector for an empty result" should "return false for !HasNext" in new TestActor {
     actorRef ! HasNext // before Done
     actorRef ! Done
     expectMsg(false)
@@ -53,16 +55,14 @@ class ResultCollectorSpec extends TestKit(ActorSystem("IterationTest")) with Fla
     expectMsg(false)
   }
 
-  it should "return false for ?HasNext" in {
-    val actorRef = TestActorRef(new ResultCollector())
+  it should "return false for ?HasNext" in new TestActor {
     val future = expectTimeout(actorRef ? HasNext)
     actorRef ! Done
     expectResult(future, false)             // before Done
     expectResult(actorRef ? HasNext, false) // after Done
   }
 
-  it should "return an exception for !GetNext" in {
-    val actorRef = TestActorRef(new ResultCollector())
+  it should "return an exception for !GetNext" in new TestActor {
     actorRef ! GetNext // before Done
     actorRef ! Done
     expectMsgPF() { case e: NoSuchElementException => () }
@@ -70,62 +70,61 @@ class ResultCollectorSpec extends TestKit(ActorSystem("IterationTest")) with Fla
     expectMsgPF() { case e: NoSuchElementException => () }
   }
 
-  it should "return an exception for ?GetNext" in {
-    val actorRef = TestActorRef(new ResultCollector())
+  it should "return an exception for ?GetNext" in new TestActor {
     val future = expectTimeout(actorRef ? GetNext)
     actorRef ! Done
     expectResult(future, None)             // before Done
     expectResult(actorRef ? GetNext, None) // after Done
   }
 
-  "A ResultCollector" should "handle !HasNext and !GetNext correctly" in {
+  "A ResultCollector" should "receive postponed responses for !HasNext and !GetNext" in new TestActor {
+    // no result available and not done yet -> messages are postponed
+    actorRef ! HasNext; intercept[AssertionError] { expectMsg(0.3 seconds, true) }
+    actorRef ! GetNext; intercept[AssertionError] { expectMsg(0.3 seconds, Result("Hello")) }
 
-    val actorRef = TestActorRef(new ResultCollector())
+    // next result -> receive postponed messages
+    actorRef ! Result("Hello");
+    expectMsg(true)
+    expectMsg(Result("Hello"))
+  }
+  
+  it should "receive postponed responses for ?HasNext and ?GetNext" in new TestActor {
+    // no result available and not done yet -> messages are postponed
+    val futureHasNext = expectTimeout(actorRef ? HasNext)
+    val futureGetNext = expectTimeout(actorRef ? GetNext)
 
+    // next result -> receive postponed messages
+    actorRef ! Result("Hello");
+    expectResult(futureHasNext, true)
+    expectResult(futureGetNext, Result("Hello"))
+  }
+  
+  it should "immediately receive responses for !HasNext and !GetNext if a result is available" in new TestActor {
+	  // first result
     actorRef ! Result("Hello")
     actorRef ! HasNext; expectMsg(true)
     actorRef ! GetNext; expectMsg(Result("Hello"))
 
-    // no result available and not done yet -> messages are postponed
-    actorRef ! HasNext; intercept[AssertionError] { expectMsg(1 second, true) }
-    actorRef ! GetNext; intercept[AssertionError] { expectMsg(1 second, Result("Hello")) }
-
-    // next result -> expect postponed messages
-    actorRef ! Result("Hello 2");
-    expectMsg(true)
-    expectMsg(Result("Hello 2"))
-
     // last result
-    actorRef ! Result("Hello 3")
+    actorRef ! Result("Goodbye")
     actorRef ! Done
     actorRef ! HasNext; expectMsg(true)
-    actorRef ! GetNext; expectMsg(Result("Hello 3"))
+    actorRef ! GetNext; expectMsg(Result("Goodbye"))
     actorRef ! HasNext; expectMsg(false)
     actorRef ! GetNext; expectMsgPF() { case e: NoSuchElementException => () }
   }
-  
-  it should "handle ?HasNext and ?GetNext correctly" in {
 
-    val actorRef = TestActorRef(new ResultCollector())
-    
+  it should "immediately receive responses for ?HasNext and ?GetNext if a result is available" in new TestActor {
+    // first result
     actorRef ! Result("Hello")
     expectResult(actorRef ? HasNext, true)
     expectResult(actorRef ? GetNext, Result("Hello"))
-    
-    // no result available and not done yet -> messages are postponed
-    val futureHasNext = expectTimeout(actorRef ? HasNext)
-    val futureGetNext = expectTimeout(actorRef ? GetNext)
-    
-    // next result -> expect postponed messages
-    actorRef ! Result("Hello 2");
-    expectResult(futureHasNext, true)
-    expectResult(futureGetNext, Result("Hello 2"))
 
     // last result
-    actorRef ! Result("Hello 3")
+    actorRef ! Result("Goodbye")
     actorRef ! Done
     expectResult(actorRef ? HasNext, true)
-    expectResult(actorRef ? GetNext, Result("Hello 3"))
+    expectResult(actorRef ? GetNext, Result("Goodbye"))
     expectResult(actorRef ? HasNext, false)
     expectResult(actorRef ? GetNext, None)
   }
