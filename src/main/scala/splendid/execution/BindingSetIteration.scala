@@ -1,23 +1,21 @@
 package splendid.execution
 
 import java.util.concurrent.ArrayBlockingQueue
-
 import org.openrdf.query.BindingSet
 import org.openrdf.query.QueryEvaluationException
-
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorSystem
 import akka.actor.Props
-
 import info.aduna.iteration.CloseableIteration
-
 import splendid.Done
 import splendid.Result
+import org.openrdf.query.impl.EmptyBindingSet
+import scala.concurrent.Future
 
 /**
  * Bridge between the Actors push-based reactive result generation and the pull-based result processing in Sesame's Iterations.
- * 
+ *
  * NOT THREAD-SAFE!
  */
 class BindingSetIteration(props: Props, uri: String, query: String, bindings: BindingSet) extends CloseableIteration[BindingSet, QueryEvaluationException] {
@@ -29,9 +27,9 @@ class BindingSetIteration(props: Props, uri: String, query: String, bindings: Bi
   val system = ActorSystem("my_operators")
   val rootNode = system.actorOf(Props(new ResultCollector(props)), "root")
 
-  rootNode ! SparqlQuery(uri, query)
+//  rootNode ! SparqlQuery(uri, query)
 
-  override def hasNext() = !done && (peek.nonEmpty || (resultQueue.take() match {
+  override def hasNext(): Boolean = !done && (peek.nonEmpty || (resultQueue.take() match {
     case Some(bs) => {
       peek = Some(bs); true
     }

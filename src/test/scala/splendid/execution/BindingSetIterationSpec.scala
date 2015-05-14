@@ -1,20 +1,16 @@
 package splendid.execution
 
 import java.util.NoSuchElementException
-
 import scala.collection.mutable.MutableList
-
 import org.openrdf.query.BindingSet
 import org.openrdf.query.QueryEvaluationException
 import org.openrdf.query.impl.EmptyBindingSet
 import org.scalatest.FlatSpecLike
 import org.scalatest.Matchers
-
 import akka.actor.Actor
 import akka.actor.ActorSystem
 import akka.actor.Props
 import akka.testkit.TestKit
-
 import splendid.Done
 import splendid.Result
 import splendid.execution.util.SparqlResult
@@ -29,44 +25,44 @@ class BindingSetIterationSpec() extends TestKit(ActorSystem("Iteration")) with F
   it should "return all result bindings" in {
     val bindings = SparqlResult.bindings(("o", "bla"))
     val results = sendAndCollectResults(Seq(bindings))
-    
+
     results.size should be(1)
     results.head should equal(bindings)
   }
-  
+
   it should "throw an exception if next() is called on an empty result set after calling hasNext()" in {
     val it = new BindingSetIteration(Props(new ListActor(Seq())), "", "", EmptyBindingSet.getInstance)
-    
-    it.hasNext() should be (false)
-    
-    a [NoSuchElementException] should be thrownBy {
+
+    it.hasNext() should be(false)
+
+    a[NoSuchElementException] should be thrownBy {
       it.next()
     }
   }
-  
+
   it should "throw an exception if next() is called on an empty result set without calling hasNext()" in {
     val it = new BindingSetIteration(Props(new ListActor(Seq())), "", "", EmptyBindingSet.getInstance)
-    
-    a [NoSuchElementException] should be thrownBy {
+
+    a[NoSuchElementException] should be thrownBy {
       it.next()
     }
   }
-  
+
   it should "throw an exception if next() is called after last result has been consumed" in {
     val it = new BindingSetIteration(Props(new ListActor(Seq(EmptyBindingSet.getInstance))), "", "", EmptyBindingSet.getInstance)
-    
-    it.hasNext() should be (true)
+
+    it.hasNext() should be(true)
     it.next() should equal(EmptyBindingSet.getInstance)
-    it.hasNext() should be (false)
-    
-    a [NoSuchElementException] should be thrownBy {
+    it.hasNext() should be(false)
+
+    a[NoSuchElementException] should be thrownBy {
       it.next()
     }
   }
-  
+
   it should "throw an exception if remove() is called" in {
     val it = new BindingSetIteration(Props(new ListActor(Seq(EmptyBindingSet.getInstance))), "", "", EmptyBindingSet.getInstance)
-    a [UnsupportedOperationException] should be thrownBy {
+    a[UnsupportedOperationException] should be thrownBy {
       it.remove()
     }
   }

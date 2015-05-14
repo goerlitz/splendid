@@ -15,11 +15,14 @@ import akka.actor.ActorSystem
 import akka.actor.Props
 import akka.testkit.ImplicitSender
 import akka.testkit.TestKit
+
 import splendid.Result
 import splendid.common.RDF
 import splendid.execution.Execution.Done
 import splendid.execution.Execution.Error
+import splendid.execution.util.EndpointClient
 import splendid.execution.util.SparqlEndpoint
+import splendid.execution.util.TestData
 import splendid.execution.util.SparqlResult
 
 /**
@@ -28,55 +31,36 @@ import splendid.execution.util.SparqlResult
  * Since the [[splendid.execution.RemoteQuery]] actor sends all results to its parent actor
  * we need a foster parent to forward all results to the TestKit's actor for checking the expectations.
  */
-class RemoteQuerySpec(_system: ActorSystem) extends TestKit(_system)
+class RemoteQuerySpec extends TestKit(ActorSystem("RemoteQuerySpec"))
   with FlatSpecLike with BeforeAndAfterAll with ImplicitSender {
 
-  def this() = this(ActorSystem("RemoteQuerySpec"))
-
-  // example RDF data from http://www.w3.org/TR/turtle/
-  val DataTTL = """
-			| @base <http://example.org/> .
-			| @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
-			| @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-			| @prefix foaf: <http://xmlns.com/foaf/0.1/> .
-			| @prefix rel: <http://www.perceive.net/schemas/relationship/> .
-			| 
-			| <#green-goblin>
-			|     rel:enemyOf <#spiderman> ;
-			|     a foaf:Person ;    # in the context of the Marvel universe
-			|     foaf:name "Green Goblin" .
-			| 
-			| <#spiderman>
-			|     rel:enemyOf <#green-goblin> ;
-			|     a foaf:Person ;
-			|     foaf:name "Spiderman", "Человек-паук"@ru .
-			""".stripMargin
-
-  val EndpointUri = URI.create("http://localhost:8001/sparql")
-  val testEndpoint = SparqlEndpoint(EndpointUri.getPort)
+  val EndpointUri = TestData.startSparqlEndpoint()
 
   override def beforeAll(): Unit = {
-    testEndpoint.add(DataTTL, "http://example.org/", RDFFormat.TURTLE)
-    testEndpoint.start()
+    //    testEndpoint.start()
   }
 
   override def afterAll(): Unit = {
-    testEndpoint.stop()
+    //    testEndpoint.stop()
     system.shutdown()
     system.awaitTermination(10.seconds)
   }
 
-  "A remote SPARQL query" must "return the expected results" in {
+  /**
+   * Test helper used to initialize a HTTP client and query a SPARQL endpoint with it.
+   */
+  private abstract class TestEndpoint(uri: String) {
+    def evalQuery(query: String): Unit = system.actorOf(Props(new FosterParent(Props(new RemoteQuery(EndpointClient(uri), query)), testActor)))
+  }
 
-    val query = "SELECT DISTINCT ?p WHERE { [] ?p [] } ORDER BY ?p"
+  "A remote SPARQL query" must "return 3 BindingSets when querying all predicates" in new TestEndpoint(EndpointUri) {
+
+    evalQuery("SELECT DISTINCT ?p WHERE { [] ?p [] } ORDER BY ?p")
+
     val expectedPredicates = Seq(
       "http://www.perceive.net/schemas/relationship/enemyOf",
       "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
       "http://xmlns.com/foaf/0.1/name")
-
-    val fosterNode = system.actorOf(Props(new FosterParent(Props[RemoteQuery], testActor)))
-
-    fosterNode ! SparqlQuery(EndpointUri.toString(), query)
 
     val bindings = expectedPredicates.map(p => SparqlResult.bindings(("p", RDF.URI(p))))
     bindings.foreach {
@@ -85,34 +69,18 @@ class RemoteQuerySpec(_system: ActorSystem) extends TestKit(_system)
     expectMsg(Done)
   }
 
-  "A non-matching SPARQL query" must "return an empty result" in {
-    val query = "SELECT ?s WHERE { ?s a <http://example.org/Nothing> }"
-
-    val fosterNode = system.actorOf(Props(new FosterParent(Props[RemoteQuery], testActor)))
-
-    fosterNode ! SparqlQuery(EndpointUri.toString(), query)
-
+  it must "return no result if the triple pattern cannot be matched" in new TestEndpoint(EndpointUri) {
+    evalQuery("SELECT ?s WHERE { ?s a <http://example.org/Nothing> }")
     expectMsg(Done)
   }
 
-  "A malformed SPARQL query" must "return an error" in {
-    val query = "SELECT * WHERE { subject a Nothing }"
-
-    val parentProps = Props(new FosterParent(Props[RemoteQuery], testActor))
-    val fosterNode = system.actorOf(parentProps)
-
-    fosterNode ! SparqlQuery(EndpointUri.toString(), query)
-
+  it must "return an error for an illegal triple pattern" in new TestEndpoint(EndpointUri) {
+    evalQuery("SELECT * WHERE { subject a Nothing }")
     expectMsgPF() { case Error(e: QueryEvaluationException) => () }
   }
 
-  "An invalid SPARQL endpoint definition" must "return an error" in {
-    val query = "SELECT ?s WHERE { ?s a <http://example.org/Nothing> }"
-
-    val fosterNode = system.actorOf(Props(new FosterParent(Props[RemoteQuery], testActor)))
-
-    fosterNode ! SparqlQuery("http://loclahost:1", query)
-
+  it must "return an error for an invalid SPARQL endpoint URI" in new TestEndpoint("http://loclahost:1") {
+    evalQuery("SELECT ?s WHERE { ?s a <http://example.org/Nothing> }")
     expectMsgPF() { case Error(e: QueryEvaluationException) => () }
   }
 

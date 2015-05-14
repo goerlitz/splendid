@@ -23,7 +23,8 @@ import akka.util.Timeout
  *
  * @author Olaf Goerlitz
  */
-class ResultCollectorSpec extends TestKit(ActorSystem("IterationTest")) with FlatSpecLike with Matchers with BeforeAndAfterAll with ImplicitSender {
+class ResultCollectorSpec extends TestKit(ActorSystem("IterationTest"))
+  with FlatSpecLike with Matchers with BeforeAndAfterAll with ImplicitSender {
 
   implicit val timeout = Timeout(5 seconds) // required for '?'
   implicit val context = scala.concurrent.ExecutionContext.global
@@ -42,8 +43,11 @@ class ResultCollectorSpec extends TestKit(ActorSystem("IterationTest")) with Fla
     case e: Throwable => e shouldBe a[NoSuchElementException]
     case x            => throw new UnsupportedOperationException(s"$x")
   }
-  
-  trait TestActor {
+
+  /**
+   * Using a synchronous test actor for each test
+   */
+  private trait TestActor {
     val actorRef = TestActorRef(ResultCollector())
   }
 
@@ -87,7 +91,7 @@ class ResultCollectorSpec extends TestKit(ActorSystem("IterationTest")) with Fla
     expectMsg(true)
     expectMsg(Result("Hello"))
   }
-  
+
   it should "receive postponed responses for ?HasNext and ?GetNext" in new TestActor {
     // no result available and not done yet -> messages are postponed
     val futureHasNext = expectTimeout(actorRef ? HasNext)
@@ -98,9 +102,9 @@ class ResultCollectorSpec extends TestKit(ActorSystem("IterationTest")) with Fla
     expectResult(futureHasNext, true)
     expectResult(futureGetNext, Result("Hello"))
   }
-  
+
   it should "immediately receive responses for !HasNext and !GetNext if a result is available" in new TestActor {
-	  // first result
+    // first result
     actorRef ! Result("Hello")
     actorRef ! HasNext; expectMsg(true)
     actorRef ! GetNext; expectMsg(Result("Hello"))
