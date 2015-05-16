@@ -44,7 +44,10 @@ class ResultCollector private (rootOpProps: Option[Props]) extends Actor with St
   import ResultCollector.{ HasNext, GetNext, Result, Done }
 
   val queue = scala.collection.mutable.Queue.empty[Result]
-  rootOpProps match { case Some(props) => context.actorOf(props) case None => }
+  rootOpProps match {
+    case Some(props) => context.actorOf(props)
+    case None        => // for testing
+  }
 
   def collecting: Actor.Receive = {
     case HasNext       => if (queue.isEmpty) stash else sender ! true

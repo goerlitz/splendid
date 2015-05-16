@@ -11,7 +11,9 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FlatSpecLike
 import org.scalatest.Matchers
 
+import akka.actor.Actor
 import akka.actor.ActorSystem
+import akka.actor.Props
 import akka.pattern.ask
 import akka.testkit.ImplicitSender
 import akka.testkit.TestActorRef
@@ -53,7 +55,7 @@ class ResultCollectorSpec extends TestKit(ActorSystem("IterationTest"))
     val actorRef = TestActorRef(ResultCollector.props)
   }
 
-  "A ResultCollector for an empty result" should "return false for !HasNext" in new TestActor {
+  "A ResultCollector" should "return false for !HasNext if the result set is empty" in new TestActor {
     actorRef ! HasNext // before Done
     actorRef ! Done
     expectMsg(false)
@@ -61,14 +63,14 @@ class ResultCollectorSpec extends TestKit(ActorSystem("IterationTest"))
     expectMsg(false)
   }
 
-  it should "return false for ?HasNext" in new TestActor {
+  it should "return false for ?HasNext if the result set is empty" in new TestActor {
     val future = expectTimeout(actorRef ? HasNext)
     actorRef ! Done
     expectResult(future, false)             // before Done
     expectResult(actorRef ? HasNext, false) // after Done
   }
 
-  it should "return an exception for !GetNext" in new TestActor {
+  it should "return an exception for !GetNext if the result set is empty" in new TestActor {
     actorRef ! GetNext // before Done
     actorRef ! Done
     expectMsgPF() { case e: NoSuchElementException => () }
@@ -76,14 +78,14 @@ class ResultCollectorSpec extends TestKit(ActorSystem("IterationTest"))
     expectMsgPF() { case e: NoSuchElementException => () }
   }
 
-  it should "return an exception for ?GetNext" in new TestActor {
+  it should "return an exception for ?GetNext if the result set is empty" in new TestActor {
     val future = expectTimeout(actorRef ? GetNext)
     actorRef ! Done
     expectResult(future, None)             // before Done
     expectResult(actorRef ? GetNext, None) // after Done
   }
 
-  "A ResultCollector" should "receive postponed responses for !HasNext and !GetNext" in new TestActor {
+  it should "receive postponed responses for !HasNext and !GetNext" in new TestActor {
     // no result available and not done yet -> messages are postponed
     actorRef ! HasNext; intercept[AssertionError] { expectMsg(0.3 seconds, true) }
     actorRef ! GetNext; intercept[AssertionError] { expectMsg(0.3 seconds, Result("Hello")) }
@@ -135,4 +137,22 @@ class ResultCollectorSpec extends TestKit(ActorSystem("IterationTest"))
     expectResult(actorRef ? GetNext, None)
   }
 
+  it should "receive results from a child actor" in {
+
+    // must use system actor - TestActorRef does not work well with Stash :-(
+    // it fails if HasNext is received before the first Result from TestResultSender
+    val actorRef = system.actorOf(ResultCollector.props(Props(new TestResultSender("Hello", 42))))
+
+    actorRef ! HasNext; expectMsg(true)
+    actorRef ! GetNext; expectMsg(Result("Hello"))
+    actorRef ! GetNext; expectMsg(Result(42))
+    actorRef ! HasNext; expectMsg(false)
+  }
+
+  protected class TestResultSender(results: Any*) extends Actor {
+    def receive = PartialFunction.empty
+
+    results.foreach { context.parent ! Result(_) }
+    context.parent ! Done
+  }
 }
