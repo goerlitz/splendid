@@ -11,8 +11,7 @@ import akka.actor.Actor
 import akka.actor.ActorSystem
 import akka.actor.Props
 import akka.testkit.TestKit
-import splendid.Done
-import splendid.Result
+import splendid.execution.util.ResultCollector._
 import splendid.execution.util.SparqlResult
 
 class BindingSetIterationSpec() extends TestKit(ActorSystem("Iteration")) with FlatSpecLike with Matchers {

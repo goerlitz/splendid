@@ -6,7 +6,6 @@ import org.openrdf.query.algebra.evaluation.QueryBindingSet
 
 import akka.actor.ActorRef
 import akka.actor.actorRef2Scala
-import splendid.Result
 
 import scala.collection.JavaConversions._
 

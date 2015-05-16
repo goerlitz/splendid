@@ -8,7 +8,7 @@ import org.openrdf.query.QueryLanguage
 import org.openrdf.repository.RepositoryException
 import org.openrdf.repository.sparql.SPARQLRepository
 
-import splendid.execution.SparqlTupleResult
+import splendid.execution.RemoteQuery.SparqlTupleResult
 
 trait SparqlEndpointClient {
   def evalTupleQuery(query: String)(implicit exec: ExecutionContext): Future[SparqlTupleResult]
@@ -31,7 +31,7 @@ class EndpointClient(uri: String) extends SparqlEndpointClient {
         val con = repo.getConnection()
 
         try {
-          // TODO check if use result handler gives better performance
+          // TODO check if using a result handler gives better performance
           val result = con.prepareTupleQuery(QueryLanguage.SPARQL, query, null).evaluate()
           promise.success(SparqlTupleResult(this, result))
         } catch {

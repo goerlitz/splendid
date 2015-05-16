@@ -4,29 +4,47 @@ import org.openrdf.query.TupleQueryResult
 
 import akka.actor.Actor
 import akka.actor.ActorLogging
-import akka.actor.ActorSystem
 import akka.actor.Props
 import akka.actor.Status.Failure
 import akka.pattern.pipe
-import splendid.Result
-import splendid.execution.Execution.Done
 import splendid.execution.util.EndpointClient
+import splendid.execution.util.ResultCollector.Done
+import splendid.execution.util.ResultCollector.Result
 import splendid.execution.util.SparqlEndpointClient
 
-case class SparqlTupleResult(client: SparqlEndpointClient, result: TupleQueryResult)
+object RemoteQuery {
+
+  case class SparqlTupleResult(client: SparqlEndpointClient, result: TupleQueryResult)
+
+  /**
+   * Create Props for an actor of this type.
+   *
+   * @param endpointURI URI of the SPARQL Endpoint.
+   * @param query The query to be evaluated at the SPARQL Endpoint.
+   * @return a [[Props]] which can be further configured.
+   */
+  def props(endpointURI: String, query: String): Props = {
+    // TODO reuse client if multiple requests are sent to the same SPARQL endpoint
+    val client = EndpointClient(endpointURI)
+    Props(classOf[RemoteQuery], client, query)
+  }
+}
 
 /**
- * Actor for executing a SPARQL query on a SPARQL endpoint.
+ * Actor for executing a SPARQL query on a SPARQL Endpoint.
  *
- * Each [[BindingSet]] of the result is forwarded to the parent actor.
+ * Each query result entry is forwarded to the parent actor.
  *
  * @author Olaf Goerlitz
  */
-class RemoteQuery(client: SparqlEndpointClient, query: String) extends Actor with ActorLogging {
+class RemoteQuery private (client: SparqlEndpointClient, query: String) extends Actor with ActorLogging {
 
   implicit val exec = context.dispatcher
 
+  // use pipe pattern to forward result and failure messages
   client evalTupleQuery query pipeTo self
+
+  import RemoteQuery.SparqlTupleResult
 
   def receive = {
     case SparqlTupleResult(client, result) =>
@@ -35,8 +53,7 @@ class RemoteQuery(client: SparqlEndpointClient, query: String) extends Actor wit
       }
       result.close()
       context.parent ! Done
-    case Failure(err: Throwable) => context.parent ! Execution.Error(err)
+    case Failure(err: Throwable) => context.parent ! err
     case x                       => println(s"IGNORING: $x") // TODO ignore or send error message
   }
-
 }

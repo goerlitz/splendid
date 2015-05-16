@@ -15,7 +15,6 @@ import akka.actor.ActorSystem
 import akka.actor.Props
 import akka.actor.Status
 import akka.actor.actorRef2Scala
-import splendid.Result
 import scala.collection.JavaConversions._
 import akka.actor.ActorContext
 import org.openrdf.query.algebra.Projection

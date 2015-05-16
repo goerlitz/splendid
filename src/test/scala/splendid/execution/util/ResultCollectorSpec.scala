@@ -36,6 +36,8 @@ class ResultCollectorSpec extends TestKit(ActorSystem("IterationTest"))
     f
   }
 
+  import ResultCollector.{ HasNext, GetNext, Result, Done }
+
   private def expectResult(f: Future[Any], value: Any): Unit = Await.result(f, 1 second) match {
     case b: Boolean   => b should be(value)
     case r: Result    => r should be(value)
@@ -48,7 +50,7 @@ class ResultCollectorSpec extends TestKit(ActorSystem("IterationTest"))
    * Using a synchronous test actor for each test
    */
   private trait TestActor {
-    val actorRef = TestActorRef(ResultCollector())
+    val actorRef = TestActorRef(ResultCollector.props)
   }
 
   "A ResultCollector for an empty result" should "return false for !HasNext" in new TestActor {

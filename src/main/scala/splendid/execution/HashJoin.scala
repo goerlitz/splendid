@@ -6,7 +6,7 @@ import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
 import akka.actor.actorRef2Scala
-import splendid.Result
+import splendid.execution.util.ResultCollector._
 import splendid.Setup
 import org.openrdf.query.algebra.evaluation.QueryBindingSet
 
@@ -36,7 +36,7 @@ class HashJoin(joinVars: Seq[String], left: ActorRef, right: ActorRef) extends A
 
   def initialized(parent: ActorRef): Receive = {
     // process results depending on sender
-    case Result(newResult) => {
+    case Result(newResult: BindingSet) => {
 
       // get variable bindings of join variables
       val joinValues = joinVars.map { x => newResult.getBinding(x).getValue }

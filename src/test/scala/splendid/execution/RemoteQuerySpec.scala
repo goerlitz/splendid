@@ -16,10 +16,8 @@ import akka.actor.Props
 import akka.testkit.ImplicitSender
 import akka.testkit.TestKit
 
-import splendid.Result
 import splendid.common.RDF
-import splendid.execution.Execution.Done
-import splendid.execution.Execution.Error
+import splendid.execution.util.ResultCollector._
 import splendid.execution.util.EndpointClient
 import splendid.execution.util.SparqlEndpoint
 import splendid.execution.util.TestData
@@ -28,8 +26,8 @@ import splendid.execution.util.SparqlResult
 /**
  * Test if queries sent to a local SPARQL endpoint return the expected results.
  *
- * Since the [[splendid.execution.RemoteQuery]] actor sends all results to its parent actor
- * we need a foster parent to forward all results to the TestKit's actor for checking the expectations.
+ * Since the [[RemoteQuery]] actor sends all results to its parent actor we need
+ * a foster parent to forward all results to the TestKit's actor for checking the expectations.
  */
 class RemoteQuerySpec extends TestKit(ActorSystem("RemoteQuerySpec"))
   with FlatSpecLike with BeforeAndAfterAll with ImplicitSender {
@@ -50,7 +48,7 @@ class RemoteQuerySpec extends TestKit(ActorSystem("RemoteQuerySpec"))
    * Test helper used to initialize a HTTP client and query a SPARQL endpoint with it.
    */
   private abstract class TestEndpoint(uri: String) {
-    def evalQuery(query: String): Unit = system.actorOf(Props(new FosterParent(Props(new RemoteQuery(EndpointClient(uri), query)), testActor)))
+    def evalQuery(query: String): Unit = system.actorOf(Props(new FosterParent(RemoteQuery.props(uri, query), testActor)))
   }
 
   "A remote SPARQL query" must "return 3 BindingSets when querying all predicates" in new TestEndpoint(EndpointUri) {
@@ -76,12 +74,12 @@ class RemoteQuerySpec extends TestKit(ActorSystem("RemoteQuerySpec"))
 
   it must "return an error for an illegal triple pattern" in new TestEndpoint(EndpointUri) {
     evalQuery("SELECT * WHERE { subject a Nothing }")
-    expectMsgPF() { case Error(e: QueryEvaluationException) => () }
+    expectMsgPF() { case e: QueryEvaluationException => () }
   }
 
   it must "return an error for an invalid SPARQL endpoint URI" in new TestEndpoint("http://loclahost:1") {
     evalQuery("SELECT ?s WHERE { ?s a <http://example.org/Nothing> }")
-    expectMsgPF() { case Error(e: QueryEvaluationException) => () }
+    expectMsgPF() { case e: QueryEvaluationException => () }
   }
 
 }

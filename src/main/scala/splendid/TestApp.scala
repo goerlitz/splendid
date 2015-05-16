@@ -12,17 +12,16 @@ import akka.actor.Props
 import akka.actor.ActorLogging
 import collection.JavaConversions._
 import akka.actor.ActorRef
+import splendid.execution.util.ResultCollector._
 
 case class Query(query: String)
-case class Result(bs: BindingSet)
 case class Setup(parent: ActorRef)
 case object Init
-case object Done
 
 class HashJoinActor extends Actor with ActorLogging {
   def receive = {
     case Init => log.info("initializing")
-    case Result(bs) => log.info("got values" + (bs.getBindingNames map { b => b + "-> " + bs.getValue(b).stringValue()}))
+    case Result(bs: BindingSet) => log.info("got values: " + (bs.getBindingNames map { b => b + "-> " + bs.getValue(b).stringValue()}))
   }
 }
 

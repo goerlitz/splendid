@@ -1,17 +1,17 @@
 package splendid.execution
 
 import org.openrdf.query.QueryLanguage
+import org.openrdf.query.parser.QueryParserUtil
 import org.openrdf.repository.sparql.SPARQLRepository
+
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
 import akka.actor.ActorSystem
 import akka.actor.Props
-import akka.actor.actorRef2Scala
-import splendid.Done
 import splendid.Query
-import splendid.Result
-import org.openrdf.query.parser.QueryParserUtil
+import splendid.execution.util.ResultCollector.Done
+import splendid.execution.util.ResultCollector.Result
 
 class SubQuery(parent: ActorRef, endpointUrl: String) extends Actor with ActorLogging {
 
