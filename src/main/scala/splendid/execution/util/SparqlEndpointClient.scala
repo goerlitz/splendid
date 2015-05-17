@@ -1,9 +1,11 @@
 package splendid.execution.util
 
+import scala.collection.JavaConversions.iterableAsScalaIterable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 
+import org.openrdf.query.BindingSet
 import org.openrdf.query.QueryLanguage
 import org.openrdf.repository.RepositoryException
 import org.openrdf.repository.sparql.SPARQLRepository
@@ -11,7 +13,7 @@ import org.openrdf.repository.sparql.SPARQLRepository
 import splendid.execution.RemoteQuery.SparqlTupleResult
 
 trait SparqlEndpointClient {
-  def evalTupleQuery(query: String)(implicit exec: ExecutionContext): Future[SparqlTupleResult]
+  def evalTupleQuery(query: String, bindings: BindingSet)(implicit exec: ExecutionContext): Future[SparqlTupleResult]
   def close(): Unit
 }
 
@@ -20,7 +22,7 @@ class EndpointClient(uri: String) extends SparqlEndpointClient {
 
   val repo = new SPARQLRepository(uri);
 
-  override def evalTupleQuery(query: String)(implicit exec: ExecutionContext): Future[SparqlTupleResult] = {
+  override def evalTupleQuery(query: String, bindings: BindingSet)(implicit exec: ExecutionContext): Future[SparqlTupleResult] = {
 
     val promise = Promise[SparqlTupleResult]
 
@@ -32,7 +34,9 @@ class EndpointClient(uri: String) extends SparqlEndpointClient {
 
         try {
           // TODO check if using a result handler gives better performance
-          val result = con.prepareTupleQuery(QueryLanguage.SPARQL, query, null).evaluate()
+          val tupleQuery = con.prepareTupleQuery(QueryLanguage.SPARQL, query, null)
+          for (bs <- bindings) tupleQuery.setBinding(bs.getName, bs.getValue)
+          val result = tupleQuery.evaluate()
           promise.success(SparqlTupleResult(this, result))
         } catch {
           case t: Throwable =>

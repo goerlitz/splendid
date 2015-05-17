@@ -1,5 +1,6 @@
 package splendid.execution
 
+import org.openrdf.query.BindingSet
 import org.openrdf.query.TupleQueryResult
 
 import akka.actor.Actor
@@ -23,10 +24,10 @@ object RemoteQuery {
    * @param query The query to be evaluated at the SPARQL Endpoint.
    * @return a [[Props]] which can be further configured.
    */
-  def props(endpointURI: String, query: String): Props = {
+  def props(endpointURI: String, query: String, bindings: BindingSet): Props = {
     // TODO reuse client if multiple requests are sent to the same SPARQL endpoint
     val client = EndpointClient(endpointURI)
-    Props(classOf[RemoteQuery], client, query)
+    Props(classOf[RemoteQuery], client, query, bindings)
   }
 }
 
@@ -37,12 +38,12 @@ object RemoteQuery {
  *
  * @author Olaf Goerlitz
  */
-class RemoteQuery private (client: SparqlEndpointClient, query: String) extends Actor with ActorLogging {
+class RemoteQuery private (client: SparqlEndpointClient, query: String, bindings: BindingSet) extends Actor with ActorLogging {
 
   implicit val exec = context.dispatcher
 
   // use pipe pattern to forward result and failure messages
-  client evalTupleQuery query pipeTo self
+  client evalTupleQuery (query, bindings) pipeTo self
 
   import RemoteQuery.SparqlTupleResult
 
