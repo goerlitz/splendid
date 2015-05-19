@@ -25,6 +25,11 @@ object TestData {
       |     foaf:name "Spiderman", "Человек-паук"@ru .
       """.stripMargin
 
+  val AllPredicates = Seq(
+    "http://www.perceive.net/schemas/relationship/enemyOf",
+    "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+    "http://xmlns.com/foaf/0.1/name")
+
   // the LinkedDataServer allows only one instance (in all tests)
   private var sparqlEndpoint: Option[SparqlEndpoint] = None
 

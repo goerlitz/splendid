@@ -27,8 +27,9 @@ import splendid.execution.util.ResultStreamIteration
 
 object ReactiveEvaluationStrategy {
 
-  type BindingSetIteration = CloseableIteration[BindingSet, QueryEvaluationException]
+  type BindingsIteration = CloseableIteration[BindingSet, QueryEvaluationException]
   type StatementIteration = CloseableIteration[Statement, QueryEvaluationException]
+  type PropsFun = (TupleExpr, BindingSet) => Props
 
   def apply() = new ReactiveEvaluationStrategy(EmptyTripleSource)
 
@@ -50,25 +51,34 @@ class ReactiveEvaluationStrategy private (tripleSource: TripleSource) extends Ev
   val system = ActorSystem.create("EvaluationStrategy")
 
   @throws(classOf[QueryEvaluationException])
-  override def evaluate(service: Service, bindings: BindingSet): BindingSetIteration = {
-
-    // ensure that a service URI is present
-    val serviceRef = service.getServiceRef
-    val endpointUrl = serviceRef.hasValue match {
-      case true => serviceRef.getValue.stringValue
-      case false =>
-        val varName = serviceRef.getName
-        if (!bindings.hasBinding(varName))
-          throw new QueryEvaluationException
-        else
-          bindings.getValue(varName).stringValue
-    }
-    val queryString = service.getSelectQueryString(service.getServiceVars)
-
-    val collectorProps = ResultCollector.props(RemoteQuery.props(endpointUrl, queryString, bindings))
-    new ResultStreamIteration(system.actorOf(collectorProps));
+  override def evaluate(service: Service, bindings: BindingSet): BindingsIteration = {
+    val serviceProps = getProps(service, bindings)
+    new ResultStreamIteration(system.actorOf(ResultCollector.props(serviceProps)))
   }
 
   @throws(classOf[QueryEvaluationException])
-  override def evaluate(join: Join, bindings: BindingSet): BindingSetIteration = ???
+  override def evaluate(join: Join, bindings: BindingSet): BindingsIteration = {
+    // TODO handle different join types - default is nested loop join
+    val joinProps = NestedLoopJoin.props(join, bindings, getProps)
+    new ResultStreamIteration(system.actorOf(ResultCollector.props(joinProps)))
+  }
+
+  private def getProps: PropsFun = (args, bindings) => args match {
+    case join: Join => ???
+    case service: Service =>
+      // ensure that a service URI is present
+      val serviceRef = service.getServiceRef
+      val endpointUrl = serviceRef.hasValue match {
+        case true => serviceRef.getValue.stringValue
+        case false =>
+          val varName = serviceRef.getName
+          if (!bindings.hasBinding(varName))
+            throw new QueryEvaluationException
+          else
+            bindings.getValue(varName).stringValue
+      }
+      val queryString = service.getSelectQueryString(service.getServiceVars)
+
+      RemoteQuery.props(endpointUrl, queryString, bindings)
+  }
 }

@@ -10,6 +10,7 @@ import org.scalatest.FlatSpecLike
 import org.scalatest.Matchers
 
 import splendid.common.RDF
+import splendid.execution.ReactiveEvaluationStrategy.BindingsIteration
 import splendid.execution.util.SparqlResult
 import splendid.execution.util.TestData
 
@@ -30,19 +31,21 @@ class ReactiveEvaluationStrategySpec extends FlatSpecLike with BeforeAndAfterAll
     ReactiveEvaluationStrategy().evaluate(ptq.getTupleExpr, bindings)
   }
 
+  private def expectAllPredicates(results: BindingsIteration): Unit =
+    expectBindings(results, TestData.AllPredicates.map { x => SparqlResult.bindings(("p", RDF.URI(x))) })
+
+  private def expectBindings(results: BindingsIteration, bindings: Seq[BindingSet]): Unit = {
+    results.hasNext() should be(true)
+    for (bs <- bindings) results.next() should be(bs)
+    results.hasNext() should be(false)
+  }
+
   "A SERVICE query" should "return 3 predicate bindings" in {
 
     val query = "SELECT DISTINCT * WHERE { SERVICE <http://localhost:8001/sparql> { [] ?p [] } }"
     val results = eval(query, EmptyBindingSet.getInstance)
 
-    val expectedPredicates = Seq(
-      "http://www.perceive.net/schemas/relationship/enemyOf",
-      "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-      "http://xmlns.com/foaf/0.1/name")
-
-    results.hasNext() should be(true)
-    for (p <- expectedPredicates) results.next() should be(SparqlResult.bindings(("p", RDF.URI(p))))
-    results.hasNext() should be(false)
+    expectAllPredicates(results)
   }
 
   it should "return one predicate binding for a given BindingSet with predicate" in {
@@ -51,9 +54,7 @@ class ReactiveEvaluationStrategySpec extends FlatSpecLike with BeforeAndAfterAll
     val predicateBinding = SparqlResult.bindings(("p", RDF.URI("http://xmlns.com/foaf/0.1/name")))
     val results = eval(query, predicateBinding)
 
-    results.hasNext() should be(true)
-    results.next() should be(predicateBinding)
-    results.hasNext() should be(false)
+    expectBindings(results, Seq(predicateBinding))
   }
 
   it should "throw an exception if the service URI is an unbound variable" in {
@@ -69,9 +70,20 @@ class ReactiveEvaluationStrategySpec extends FlatSpecLike with BeforeAndAfterAll
     val results = eval(query, endpointBinding)
 
     // TODO check if DISTINCT ?p should really return ?endpoint of BindingSet
-    results.hasNext() should be(true)
-    results.next() should be(endpointBinding)
-    results.hasNext() should be(false)
+    expectBindings(results, Seq(endpointBinding))
+  }
+
+  "A Join query" should "return all predicate bindings" in {
+    val query = """
+          | SELECT DISTINCT ?p WHERE {
+          |   SERVICE <http://localhost:8001/sparql> { ?s a ?type }
+          |   SERVICE <http://localhost:8001/sparql> { ?s ?p ?o }
+          | }""".stripMargin
+
+    val results = eval(query, EmptyBindingSet.getInstance)
+
+    // TODO fix RemoteQuery such that ?type will be returned
+    expectAllPredicates(results)
   }
 
   //  it should "use an endpoint URI defined via BIND" in {
