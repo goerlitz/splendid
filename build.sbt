@@ -17,10 +17,10 @@ resolvers += "Restlet repository required by LinkedDataServer" at "http://maven.
 libraryDependencies ++= Seq(
 
   // scala libraries
-  "com.typesafe.akka" %% "akka-actor"   % "2.3.10",
+  "com.typesafe.akka" %% "akka-actor"   % "2.3.11",
   
   // testing
-  "com.typesafe.akka" %% "akka-testkit" % "2.3.10" % "test",
+  "com.typesafe.akka" %% "akka-testkit" % "2.3.11" % "test",
   "org.scalacheck"    %% "scalacheck"   % "1.12.2" % "test",
   "org.scalatest"     %% "scalatest"    % "2.2.4"  % "test",
   
