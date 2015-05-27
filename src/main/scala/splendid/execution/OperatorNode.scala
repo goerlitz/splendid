@@ -50,7 +50,6 @@ class OperatorNode extends Actor with ActorLogging {
   }
 
   def handle(proj: Projection, bindings: BindingSet): Unit = {
-    val projElemList = proj.getProjectionElemList
     val child = actorOf(Props[OperatorNode], "child")
     
     val projElemNames = proj.getProjectionElemList.getElements.map { x => x.getSourceName }

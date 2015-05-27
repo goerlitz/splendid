@@ -4,8 +4,20 @@ version := "0.1"
 
 scalaVersion := "2.11.6"
 
-// Add scalac option to show feature warnings
-scalacOptions ++= Seq("-feature")
+// Add scalac options for ensuring safer Scala code
+scalacOptions ++= Seq(
+  "-encoding", "UTF-8",
+  "-deprecation",         // warn if deprecated APIs are used
+  "-feature",             // warn if features are used that should be imported explicitly
+  "-unchecked",           // warn if generated code depends on assumptions
+
+  "-Xfatal-warnings",     // Fail the compilation if there are any warnings
+  "-Xlint",               // Enable recommended additional warnings
+
+  "-Yno-adapted-args",
+  "-Ywarn-dead-code",
+  "-Ywarn-unused-import"
+)
 
 // Include only src/[main|test]/scala in the compile/test configuration
 unmanagedSourceDirectories in Compile := (scalaSource in Compile).value :: Nil
@@ -21,7 +33,7 @@ libraryDependencies ++= Seq(
   
   // testing
   "com.typesafe.akka" %% "akka-testkit" % "2.3.11" % "test",
-  "org.scalacheck"    %% "scalacheck"   % "1.12.2" % "test",
+  "org.scalacheck"    %% "scalacheck"   % "1.12.3" % "test",
   "org.scalatest"     %% "scalatest"    % "2.2.4"  % "test",
   
   // 3rd party

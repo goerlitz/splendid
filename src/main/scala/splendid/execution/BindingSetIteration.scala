@@ -69,7 +69,7 @@ class BindingSetIteration(props: Props, uri: String, query: String, bindings: Bi
         context.system.shutdown();
       }
       case msg if sender != child => child forward msg
-      case msg                    => log.warning("unknown message $msg")
+      case msg                    => log.warning(s"unknown message $msg")
     }
   }
 }
