@@ -2,21 +2,20 @@
 *.log
 
 # sbt specific
-.cache/
+.cache*
 .history/
 .lib/
 dist/*
 target/
 lib_managed/
 src_managed/
-project/boot/
-project/plugins/project/
-project/*
+project/*/
+project/*-shim.sbt
 
 # Scala-IDE specific
-.cache
 .classpath
 .project
 .scala_dependencies
+.settings
 .worksheet
 /bin/
