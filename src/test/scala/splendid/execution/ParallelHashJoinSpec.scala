@@ -20,10 +20,10 @@ import akka.testkit.TestActorRef
 import akka.testkit.TestKit
 
 class ParallelHashJoinSpec(_system: ActorSystem) extends TestKit(_system)
-  with ImplicitSender
-  with Matchers
-  with FlatSpecLike
-  with BeforeAndAfterAll {
+    with ImplicitSender
+    with Matchers
+    with FlatSpecLike
+    with BeforeAndAfterAll {
 
   def this() = this(ActorSystem("ParallelHashJoinSpec"))
 
@@ -47,7 +47,6 @@ class ParallelHashJoinSpec(_system: ActorSystem) extends TestKit(_system)
       new ListBindingSet(names.toList, values.map { x => fac.createLiteral(x.toString) })
     }
   }
-  
 
   "A ParallelHashJoin" should "throw IllegalArgumentException if BindingSet is empty" in new ActorSetup {
 
@@ -74,46 +73,46 @@ class ParallelHashJoinSpec(_system: ActorSystem) extends TestKit(_system)
     val target = collector.underlyingActor
 
     assertResult(0, "entries in result set")(target.results.size)
-    
+
     join.handle(leftSource, bindings("x" -> 1, "z" -> 3))
     join.handle(leftSource, bindings("x" -> 1, "z" -> 4))
     join.handle(leftSource, bindings("x" -> 2, "z" -> 3))
     join.handle(rightSource, bindings("x" -> 1, "y" -> 2))
-    
+
     assertResult(2, "entries in result set")(target.results.size)
     assert(target.results.contains(bindings("x" -> 1, "y" -> 2, "z" -> 3)))
     assert(target.results.contains(bindings("x" -> 1, "y" -> 2, "z" -> 4)))
   }
-  
+
   it should "return correct BindingSets for two join variables" in new ActorSetup {
 
     val join = ParallelHashJoin(Set("x", "y"), leftSource, rightSource, collector)
 
     val results = collector.underlyingActor
-    
+
     assertResult(0, "entries in result set")(results.results.size)
-    
+
     join.handle(leftSource, bindings("x" -> 1, "y" -> 1, "z" -> 3))
     join.handle(leftSource, bindings("x" -> 1, "y" -> 2, "z" -> 4))
     join.handle(rightSource, bindings("x" -> 1, "y" -> 2, "a" -> 0))
-    
+
     assertResult(1, "entries in result set")(results.results.size)
     assert(results.results.contains(bindings("a" -> 0, "x" -> 1, "y" -> 2, "z" -> 4)))
   }
-  
+
   it should "return the cross product for no join variables" in new ActorSetup {
 
     val join = ParallelHashJoin(Set(), leftSource, rightSource, collector)
 
     val target = collector.underlyingActor
-    
+
     assertResult(0, "entries in result set")(target.results.size)
-    
+
     join.handle(leftSource, bindings("x" -> 1, "y" -> 1))
     join.handle(leftSource, bindings("x" -> 1))
     join.handle(rightSource, bindings("a" -> 1, "b" -> 2))
     join.handle(rightSource, bindings("a" -> 1))
-    
+
     assertResult(4, "entries in result set")(target.results.size)
     assert(target.results.contains(bindings("a" -> 1, "b" -> 2, "x" -> 1, "y" -> 1)))
     assert(target.results.contains(bindings("a" -> 1, "b" -> 2, "x" -> 1)))
@@ -129,7 +128,7 @@ class ResultSet extends Actor {
 
   val results = scala.collection.mutable.Set[BindingSet]()
 
-  def receive = {
+  def receive: Actor.Receive = {
     case TupleResult(bindings) => {
       results.add(bindings)
     }

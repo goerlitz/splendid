@@ -38,7 +38,7 @@ class SparqlEndpoint(port: Int) {
 
   // disable verbose logging in Restlet engine
   Engine.setLogLevel(Level.WARNING)
-  
+
   // prevent LinkedDataServer (SparqlResource) from logging to System.err
   System.err.close()
 
@@ -64,7 +64,7 @@ class SparqlEndpoint(port: Int) {
 
   /**
    * Add RDF data provided in a file to the repository.
-   * 
+   *
    * @param filename name of the file containing the RDF data.
    * @param rdfFormat the format of the RDF data.
    */
@@ -82,18 +82,19 @@ class SparqlEndpoint(port: Int) {
         con.add(reader, baseUri, rdfFormat)
       } catch {
         // TODO: handle exceptions
-        case e: IOException         => println(s"IOException: $e")
-        case e: RDFParseException   => println(s"RDFParseException: $e")
-        case e: RepositoryException => println(s"RepositoryException: $e")
+        case e: IOException         => e.printStackTrace()
+        case e: RDFParseException   => e.printStackTrace()
+        case e: RepositoryException => e.printStackTrace()
       } finally {
         con.close()
       }
     } catch {
-      case e: RepositoryException => println(s"RepositoryException: $e")
+      case e: RepositoryException => e.printStackTrace()
     }
   }
 }
 
 object SparqlEndpoint {
-  def apply(port: Int = 8001) = new SparqlEndpoint(port)
+  val DEFAULT_PORT = 8001
+  def apply(port: Int = DEFAULT_PORT): SparqlEndpoint = new SparqlEndpoint(port)
 }

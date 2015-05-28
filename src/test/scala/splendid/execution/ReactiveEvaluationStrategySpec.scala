@@ -94,27 +94,26 @@ class ReactiveEvaluationStrategySpec extends FlatSpecLike with BeforeAndAfterAll
   //      | }
   //      |""".stripMargin
   //  }
-  //  
+  //
   //  it should "use an endpoint URI defined via BIND as IRI" in {
-  //	  val query = """
-  //			  | SELECT DISTINCT * WHERE {
-  //			  |   BIND (IRI("http://localhost:8001/sparql") AS ?endpoint)
-  //			  |   SERVICE ?endpoint { [] ?p [] }
-  //			  | }
-  //			  |""".stripMargin
+  //    val query = """
+  //        | SELECT DISTINCT * WHERE {
+  //        |   BIND (IRI("http://localhost:8001/sparql") AS ?endpoint)
+  //        |   SERVICE ?endpoint { [] ?p [] }
+  //        | }
+  //        |""".stripMargin
   //  }
-  //  
+  //
   //  it should "use an endpoint URI defines via VALUES" in {
-  //	  val query = """
-  //			  | SELECT DISTINCT * WHERE {
-  //			  |   VALUES ?endpoint { <http://localhost:8001/sparql> }
-  //			  |   SERVICE ?endpoint { [] ?p [] }
-  //			  | }
-  //			  |""".stripMargin
+  //    val query = """
+  //        | SELECT DISTINCT * WHERE {
+  //        |   VALUES ?endpoint { <http://localhost:8001/sparql> }
+  //        |   SERVICE ?endpoint { [] ?p [] }
+  //        | }
+  //        |""".stripMargin
   //  }
-  //  
+  //
   //  "A JOIN query" should "return joined results" in {
-  //	  val query = "SELECT DISTINCT ?p WHERE {[] ?p ?x. ?x a []} LIMIT 3"
+  //    val query = "SELECT DISTINCT ?p WHERE {[] ?p ?x. ?x a []} LIMIT 3"
   //  }
-
 }

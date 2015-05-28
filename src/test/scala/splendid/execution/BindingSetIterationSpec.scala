@@ -77,7 +77,7 @@ class BindingSetIterationSpec() extends TestKit(ActorSystem("Iteration")) with F
   }
 
   private class ListActor(list: Seq[BindingSet]) extends Actor {
-    def receive = PartialFunction.empty
+    def receive: Actor.Receive = PartialFunction.empty
 
     list.foreach { context.parent ! Result(_) }
     context.parent ! Done

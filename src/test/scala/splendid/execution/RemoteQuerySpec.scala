@@ -103,7 +103,7 @@ class RemoteQuerySpec extends TestKit(ActorSystem("RemoteQuerySpec"))
 
     val child = context.actorOf(childProps, "child")
 
-    def receive = {
+    def receive: Actor.Receive = {
       case msg if sender == child => probe forward msg
       case msg                    => child forward msg
     }

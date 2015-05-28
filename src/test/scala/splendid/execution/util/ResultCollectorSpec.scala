@@ -31,7 +31,7 @@ class ResultCollectorSpec extends TestKit(ActorSystem("IterationTest"))
   implicit val timeout = Timeout(5 seconds) // required for '?'
   implicit val context = scala.concurrent.ExecutionContext.global
 
-  override def afterAll = system.shutdown()
+  override def afterAll: Unit = system.shutdown()
 
   private def expectTimeout(f: Future[Any]): Future[Any] = {
     intercept[TimeoutException] { Await.result(f, 0.3 seconds) }
@@ -141,16 +141,16 @@ class ResultCollectorSpec extends TestKit(ActorSystem("IterationTest"))
 
     // must use system actor - TestActorRef does not work well with Stash :-(
     // it fails if HasNext is received before the first Result from TestResultSender
-    val actorRef = system.actorOf(ResultCollector.props(Props(new TestResultSender("Hello", 42))))
+    val actorRef = system.actorOf(ResultCollector.props(Props(new TestResultSender("Hello", 1))))
 
     actorRef ! HasNext; expectMsg(true)
     actorRef ! GetNext; expectMsg(Result("Hello"))
-    actorRef ! GetNext; expectMsg(Result(42))
+    actorRef ! GetNext; expectMsg(Result(1))
     actorRef ! HasNext; expectMsg(false)
   }
 
   protected class TestResultSender(results: Any*) extends Actor {
-    def receive = PartialFunction.empty
+    def receive: Actor.Receive = PartialFunction.empty
 
     results.foreach { context.parent ! Result(_) }
     context.parent ! Done
