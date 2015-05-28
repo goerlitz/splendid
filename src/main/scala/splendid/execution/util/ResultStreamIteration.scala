@@ -18,13 +18,13 @@ import info.aduna.iteration.CloseableIteration
 
 /**
  * Implementation of a [[org.openrdf.query.BindingSet]] iterator based on an underlying result collector.
- * 
+ *
  * @author Olaf Goerlitz
  */
 class ResultStreamIteration(resultCollector: ActorRef) extends CloseableIteration[BindingSet, QueryEvaluationException] {
 
   implicit val timeout: Timeout = Timeout(10 seconds)
-  
+
   import ResultCollector._
 
   override def hasNext(): Boolean = Await.result(resultCollector ? HasNext, Duration.Inf) match {

@@ -31,7 +31,7 @@ object ReactiveEvaluationStrategy {
   type StatementIteration = CloseableIteration[Statement, QueryEvaluationException]
   type PropsFun = (TupleExpr, BindingSet) => Props
 
-  def apply() = new ReactiveEvaluationStrategy(EmptyTripleSource)
+  def apply(): ReactiveEvaluationStrategy = new ReactiveEvaluationStrategy(EmptyTripleSource)
 
   /**
    * A TripleSource which contains nothing.
@@ -72,10 +72,11 @@ class ReactiveEvaluationStrategy private (tripleSource: TripleSource) extends Ev
         case true => serviceRef.getValue.stringValue
         case false =>
           val varName = serviceRef.getName
-          if (!bindings.hasBinding(varName))
+          if (!bindings.hasBinding(varName)) {
             throw new QueryEvaluationException
-          else
+          } else {
             bindings.getValue(varName).stringValue
+          }
       }
       val queryString = service.getSelectQueryString(service.getServiceVars)
 

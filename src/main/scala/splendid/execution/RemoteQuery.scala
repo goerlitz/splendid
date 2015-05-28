@@ -47,7 +47,7 @@ class RemoteQuery private (client: SparqlEndpointClient, query: String, bindings
 
   import RemoteQuery.SparqlTupleResult
 
-  def receive = {
+  def receive: Actor.Receive = {
     case SparqlTupleResult(client, result) =>
       while (result.hasNext()) {
         context.parent ! Result(result.next())

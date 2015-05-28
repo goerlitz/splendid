@@ -46,17 +46,18 @@ class BindingSetIteration(props: Props, uri: String, query: String, bindings: Bi
         peek = None
         bs
       }
-      case None => resultQueue.take() getOrElse { // end of queue 
+      // end of queue
+      case None => resultQueue.take() getOrElse {
         done = true
         throw new NoSuchElementException
       }
     }
   }
 
-  override def remove() = throw new UnsupportedOperationException()
+  override def remove(): Unit = throw new UnsupportedOperationException()
 
   // TODO: stop actors
-  override def close() = throw new UnsupportedOperationException()
+  override def close(): Unit = throw new UnsupportedOperationException()
 
   class ResultCollector(props: Props) extends Actor with ActorLogging {
 

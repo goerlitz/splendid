@@ -58,5 +58,5 @@ class NestedLoopJoin private (join: Join, bindings: BindingSet, getProps: PropsF
     case x    => log.warning(s"unknown message $x")
   }
 
-  def receive = waitingForResults(false, 0)
+  def receive: Actor.Receive = waitingForResults(false, 0)
 }
