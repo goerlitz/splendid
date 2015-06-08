@@ -54,12 +54,7 @@ class RemoteQuerySpec extends TestKit(ActorSystem("RemoteQuerySpec"))
 
     evalQuery("SELECT DISTINCT ?p WHERE { [] ?p [] } ORDER BY ?p", EmptyBindings)
 
-    val expectedPredicates = Seq(
-      "http://www.perceive.net/schemas/relationship/enemyOf",
-      "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-      "http://xmlns.com/foaf/0.1/name")
-
-    val bindings = expectedPredicates.map(p => SparqlResult.bindings(("p", RDF.URI(p))))
+    val bindings = TestData.AllPredicates.map(p => SparqlResult.bindings(("p", RDF.URI(p))))
     for (bs <- bindings) expectMsg(Result(bs))
     expectMsg(Done)
   }

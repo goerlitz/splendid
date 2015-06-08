@@ -30,6 +30,10 @@ object TestData {
     "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
     "http://xmlns.com/foaf/0.1/name")
 
+  val AllSubjects = Seq(
+    "http://example.org/#green-goblin",
+    "http://example.org/#spiderman")
+
   // the LinkedDataServer allows only one instance (in all tests)
   private var sparqlEndpoint: Option[SparqlEndpoint] = None
 
