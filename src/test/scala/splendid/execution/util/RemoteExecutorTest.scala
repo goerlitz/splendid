@@ -69,6 +69,8 @@ class RemoteExecutorTest extends TestKit(ActorSystem("RemoteExecutor"))
       }
     }
 
+    // TODO: what about passing bindings which contain additional variables that are not part of the query?
+
     "given triple pattern '?s ?p []'" should {
 
       "return all subjects as result if a predicate binding is applied" in {
@@ -106,8 +108,8 @@ class RemoteExecutorTest extends TestKit(ActorSystem("RemoteExecutor"))
   }
 
   private def evalQuery(endpoint: String, query: String, bindings: BindingSet): Unit = {
-    val executor = system.actorOf(FosterParent.props(Props[RemoteExecutor], testActor))
-    executor ! SparqlQuery(endpoint, query, bindings)
+    val executor = system.actorOf(FosterParent.props(RemoteExecutor.props(endpoint), testActor))
+    executor ! SparqlQuery(query, bindings)
   }
 
   private def expectResultBindings(tuples: (String, Any)*): Unit = tuples.foreach(x => expectMsg(Result(SparqlResult.bindings(x))))
