@@ -14,6 +14,7 @@ import org.openrdf.repository.sparql.SPARQLRepository
 
 import akka.actor.Actor
 import akka.actor.ActorLogging
+import akka.actor.ActorRef
 import akka.actor.Props
 
 object RemoteExecutor {
@@ -48,40 +49,42 @@ class RemoteExecutor private (endpoint: String) extends Actor with ActorLogging 
 
   private def eval(query: String, bindings: BindingSet) = Future {
 
+    val origin = sender;
+
     try {
       val con = repo.getConnection()
 
-      Try(con.prepareQuery(QueryLanguage.SPARQL, query)) flatMap evalQuery(bindings) recover {
-        case t: Throwable => context.parent ! t
+      Try(con.prepareQuery(QueryLanguage.SPARQL, query)) flatMap evalQuery(origin, bindings) recover {
+        case t: Throwable => origin ! t
       }
       con.close()
 
     } catch {
-      case t: Throwable => context.parent ! t
+      case t: Throwable => origin ! t
     }
   }
 
-  private def evalQuery(bindings: BindingSet): PartialFunction[Query, Try[Unit]] = {
-    case q: TupleQuery   => evalTupleQuery(q, bindings)
+  private def evalQuery(origin: ActorRef, bindings: BindingSet): PartialFunction[Query, Try[Unit]] = {
+    case q: TupleQuery   => evalTupleQuery(origin, q, bindings)
     case q: GraphQuery   => ???
-    case q: BooleanQuery => evalBooleanQuery(q, bindings)
+    case q: BooleanQuery => evalBooleanQuery(origin, q, bindings)
   }
 
-  private def evalTupleQuery(query: TupleQuery, bindings: BindingSet): Try[Unit] = Try {
+  private def evalTupleQuery(origin: ActorRef, query: TupleQuery, bindings: BindingSet): Try[Unit] = Try {
     bindings.map { bs => query.setBinding(bs.getName, bs.getValue) }
     query.evaluate()
   } map { result =>
-    while (result.hasNext()) { // TODO can throw exception
-      context.parent ! TupleResult(result.next()) // TODO can throw exception
+    while (result.hasNext()) { // TODO: can throw exception
+      origin ! TupleResult(result.next()) // TODO: can throw exception
     }
-    result.close() // TODO can throw exception
-    context.parent ! EndOfData
+    origin ! EndOfData
+    Try(result.close())
   }
 
-  private def evalBooleanQuery(query: BooleanQuery, bindings: BindingSet): Try[Unit] = Try {
+  private def evalBooleanQuery(origin: ActorRef, query: BooleanQuery, bindings: BindingSet): Try[Unit] = Try {
     bindings.map { bs => query.setBinding(bs.getName, bs.getValue) }
-    context.parent ! BooleanResult(query.evaluate())
-    context.parent ! EndOfData
+    origin ! BooleanResult(query.evaluate())
+    origin ! EndOfData
   }
 
 }

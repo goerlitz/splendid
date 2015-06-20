@@ -11,14 +11,14 @@ import org.scalatest.WordSpecLike
 
 import akka.actor.ActorSystem
 import akka.testkit.ImplicitSender
+import akka.testkit.TestActorRef
 import akka.testkit.TestKit
 
 import splendid.common.RDF
-import splendid.execution.testutil.FosterParent
-import splendid.execution.util.RemoteExecutor.SparqlQuery
-import splendid.execution.util.RemoteExecutor.TupleResult
 import splendid.execution.util.RemoteExecutor.BooleanResult
 import splendid.execution.util.RemoteExecutor.EndOfData
+import splendid.execution.util.RemoteExecutor.SparqlQuery
+import splendid.execution.util.RemoteExecutor.TupleResult
 
 /**
  * Behavior-driven tests for RemoteExecutor.
@@ -140,11 +140,10 @@ class RemoteExecutorTest extends TestKit(ActorSystem("RemoteExecutor"))
     }
   }
 
-  private def evalQuery(endpoint: String, query: String, bindings: BindingSet): Unit = {
-    val executor = system.actorOf(FosterParent.props(RemoteExecutor.props(endpoint), testActor))
-    executor ! SparqlQuery(query, bindings)
-  }
+  private def evalQuery(endpoint: String, query: String, bindings: BindingSet): Unit =
+    TestActorRef(RemoteExecutor.props(endpoint)) ! SparqlQuery(query, bindings)
 
-  private def expectTupleResults(tuples: (String, Any)*): Unit = tuples.foreach(x => expectMsg(TupleResult(SparqlResult.bindings(x))))
+  private def expectTupleResults(tuples: (String, Any)*): Unit =
+    tuples.foreach(x => expectMsg(TupleResult(SparqlResult.bindings(x))))
 
 }

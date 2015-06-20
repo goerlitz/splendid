@@ -13,10 +13,10 @@ object FosterParent {
  */
 class FosterParent private (childProps: Props, probe: ActorRef) extends Actor {
 
-  val child = context.actorOf(childProps, "child")
+  val child = context.actorOf(childProps, "fosterChild")
 
   def receive: Actor.Receive = {
     case msg if sender == child => probe forward msg
-    case msg                    => child forward msg
+    case msg                    => child ! msg
   }
 }
