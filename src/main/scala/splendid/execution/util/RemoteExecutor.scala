@@ -15,11 +15,12 @@ import org.openrdf.repository.sparql.SPARQLRepository
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.Props
-import splendid.execution.util.ResultCollector.Done
-import splendid.execution.util.ResultCollector.Result
 
 object RemoteExecutor {
   final case class SparqlQuery(query: String, bindings: BindingSet)
+  final case class TupleResult(bindings : BindingSet)
+  final case class BooleanResult(exist: Boolean)
+  final case object EndOfData // TODO: include count of sent results?
 
   def props(endpoint: String): Props = Props(new RemoteExecutor(endpoint))
 }
@@ -31,7 +32,7 @@ object RemoteExecutor {
  */
 class RemoteExecutor private (endpoint: String) extends Actor with ActorLogging {
 
-  import RemoteExecutor.SparqlQuery
+  import RemoteExecutor.{ SparqlQuery, TupleResult, BooleanResult, EndOfData }
 
   implicit val exec = context.dispatcher
 
@@ -42,7 +43,7 @@ class RemoteExecutor private (endpoint: String) extends Actor with ActorLogging 
 
   override def receive: Actor.Receive = {
     case SparqlQuery(query, bindings) => eval(query, bindings)
-    case x                            => ??? // TODO failure?
+    case x                            => ??? // TODO: fail?
   }
 
   private def eval(query: String, bindings: BindingSet) = Future {
@@ -71,16 +72,16 @@ class RemoteExecutor private (endpoint: String) extends Actor with ActorLogging 
     query.evaluate()
   } map { result =>
     while (result.hasNext()) { // TODO can throw exception
-      context.parent ! Result(result.next()) // TODO can throw exception
+      context.parent ! TupleResult(result.next()) // TODO can throw exception
     }
     result.close() // TODO can throw exception
-    context.parent ! Done
+    context.parent ! EndOfData
   }
 
   private def evalBooleanQuery(query: BooleanQuery, bindings: BindingSet): Try[Unit] = Try {
     bindings.map { bs => query.setBinding(bs.getName, bs.getValue) }
-    query.evaluate()
-    ??? // TODO: send ASK response
+    context.parent ! BooleanResult(query.evaluate())
+    context.parent ! EndOfData
   }
 
 }

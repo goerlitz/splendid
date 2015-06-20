@@ -10,15 +10,15 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.WordSpecLike
 
 import akka.actor.ActorSystem
-import akka.actor.Props
 import akka.testkit.ImplicitSender
 import akka.testkit.TestKit
 
 import splendid.common.RDF
 import splendid.execution.testutil.FosterParent
 import splendid.execution.util.RemoteExecutor.SparqlQuery
-import splendid.execution.util.ResultCollector.Done
-import splendid.execution.util.ResultCollector.Result
+import splendid.execution.util.RemoteExecutor.TupleResult
+import splendid.execution.util.RemoteExecutor.BooleanResult
+import splendid.execution.util.RemoteExecutor.EndOfData
 
 /**
  * Behavior-driven tests for RemoteExecutor.
@@ -38,55 +38,88 @@ class RemoteExecutorTest extends TestKit(ActorSystem("RemoteExecutor"))
   override def afterAll(): Unit = {
     //    testEndpoint.stop()
     system.shutdown()
-    system.awaitTermination(100 seconds)
+    system.awaitTermination(10 seconds)
   }
 
   "A RemoteExecutor" when {
 
-    "given triple pattern '[] ?p []'" should {
+    val SELECT_PRED = "SELECT DISTINCT * WHERE { [] ?p [] }"
+
+    s"given '$SELECT_PRED'" should {
 
       "return all predicates as result if no bindings are applied" in {
-        evalQuery(EndpointUri, "SELECT DISTINCT * WHERE { [] ?p [] }", EmptyBindings)
+        evalQuery(EndpointUri, SELECT_PRED, EmptyBindings)
 
-        expectResultBindings(TestData.AllPredicates.map { "p" -> RDF.URI(_) }: _*)
-        expectMsg(Done)
+        expectTupleResults(TestData.AllPredicates.map { "p" -> RDF.URI(_) }: _*)
+        expectMsg(EndOfData)
       }
 
-      "return one empty result if a predicate binding is applied (variable get replaced)" in {
+      "return one empty result if a predicate binding is applied (variable is replaced)" in {
         val p = SparqlResult.bindings("p" -> RDF.URI(TestData.AllPredicates.head))
-        evalQuery(EndpointUri, "SELECT DISTINCT * WHERE { [] ?p [] }", p)
+        evalQuery(EndpointUri, SELECT_PRED, p)
 
-        expectMsg(Result(EmptyBindings))
-        expectMsg(Done)
+        expectMsg(TupleResult(EmptyBindings))
+        expectMsg(EndOfData)
       }
 
       "return all predicates as result if no bindings can be applied (wrong variable)" in {
         val s = SparqlResult.bindings("s" -> RDF.URI(TestData.AllSubjects.head))
-        evalQuery(EndpointUri, "SELECT DISTINCT * WHERE { [] ?p [] }", s)
+        evalQuery(EndpointUri, SELECT_PRED, s)
 
-        expectResultBindings(TestData.AllPredicates.map { "p" -> RDF.URI(_) }: _*)
-        expectMsg(Done)
+        expectTupleResults(TestData.AllPredicates.map { "p" -> RDF.URI(_) }: _*)
+        expectMsg(EndOfData)
       }
     }
 
-    // TODO: what about passing bindings which contain additional variables that are not part of the query?
+    val ASK_PRED = "ASK { [] ?p [] }"
+    // TODO: enable ASK tests once LinkedDataServer is fixed
 
-    "given triple pattern '?s ?p []'" should {
+    s"given '$ASK_PRED'" should {
+
+      "return true if no bindings are applied" ignore {
+        evalQuery(EndpointUri, ASK_PRED, EmptyBindings)
+
+        expectMsg(BooleanResult(true))
+        expectMsg(EndOfData)
+      }
+
+      "return true if a predicate binding is applied (variable is replaced)" ignore {
+        val p = SparqlResult.bindings("p" -> RDF.URI(TestData.AllPredicates.head))
+        evalQuery(EndpointUri, ASK_PRED, p)
+
+        expectMsg(BooleanResult(true))
+        expectMsg(EndOfData)
+      }
+
+      "return true if no bindings can be applied (wrong variable)" ignore {
+        val s = SparqlResult.bindings("s" -> RDF.URI(TestData.AllSubjects.head))
+        evalQuery(EndpointUri, ASK_PRED, s)
+
+        expectMsg(BooleanResult(true))
+        expectMsg(EndOfData)
+      }
+    }
+
+    // TODO: what about passing bindings which contain additional variables that are not part of the query - should they be returned?
+
+    val SELECT_SUBJ_PRED = "SELECT DISTINCT * WHERE { ?s ?p [] }"
+
+    s"given '$SELECT_SUBJ_PRED'" should {
 
       "return all subjects as result if a predicate binding is applied" in {
         val p = SparqlResult.bindings("p" -> RDF.URI(TestData.AllPredicates.head))
-        evalQuery(EndpointUri, "SELECT DISTINCT * WHERE { ?s ?p [] }", p)
+        evalQuery(EndpointUri, SELECT_SUBJ_PRED, p)
 
-        expectResultBindings(TestData.AllSubjects.map { "s" -> RDF.URI(_) }: _*)
-        expectMsg(Done)
+        expectTupleResults(TestData.AllSubjects.map { "s" -> RDF.URI(_) }: _*)
+        expectMsg(EndOfData)
       }
 
       "return all subjects as result for every applied predicate binding" in {
         TestData.AllPredicates.foreach { p =>
           {
-            evalQuery(EndpointUri, "SELECT DISTINCT * WHERE { ?s ?p [] }", SparqlResult.bindings("p" -> RDF.URI(p)))
-            expectResultBindings(TestData.AllSubjects.map { s => "s" -> RDF.URI(s) }: _*)
-            expectMsg(Done)
+            evalQuery(EndpointUri, SELECT_SUBJ_PRED, SparqlResult.bindings("p" -> RDF.URI(p)))
+            expectTupleResults(TestData.AllSubjects.map { s => "s" -> RDF.URI(s) }: _*)
+            expectMsg(EndOfData)
           }
         }
       }
@@ -94,7 +127,7 @@ class RemoteExecutorTest extends TestKit(ActorSystem("RemoteExecutor"))
 
     "given an invalid SPARQL endpoint" should {
       "return an exception" in {
-        evalQuery("http://loclahost:1", "SELECT * WHERE { [] ?p [] }", EmptyBindings)
+        evalQuery("http://loclahost:1", SELECT_PRED, EmptyBindings)
         expectMsgPF() { case e: QueryEvaluationException => () }
       }
     }
@@ -112,6 +145,6 @@ class RemoteExecutorTest extends TestKit(ActorSystem("RemoteExecutor"))
     executor ! SparqlQuery(query, bindings)
   }
 
-  private def expectResultBindings(tuples: (String, Any)*): Unit = tuples.foreach(x => expectMsg(Result(SparqlResult.bindings(x))))
+  private def expectTupleResults(tuples: (String, Any)*): Unit = tuples.foreach(x => expectMsg(TupleResult(SparqlResult.bindings(x))))
 
 }
