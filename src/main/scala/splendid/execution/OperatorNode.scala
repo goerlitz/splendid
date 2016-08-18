@@ -1,6 +1,8 @@
 package splendid.execution
 
 import scala.collection.JavaConversions._
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 import org.openrdf.query.BindingSet
 import org.openrdf.query.QueryLanguage
@@ -100,5 +102,5 @@ object OperatorApp extends App {
 
   rootNode ! TupleExprOp(ptq.getTupleExpr(), new EmptyBindingSet())
 
-  system.awaitTermination()
+  Await.result(system.whenTerminated, 30.seconds)
 }

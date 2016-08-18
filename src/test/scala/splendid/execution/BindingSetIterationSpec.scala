@@ -3,7 +3,6 @@ package splendid.execution
 import java.util.NoSuchElementException
 import scala.collection.mutable.MutableList
 import org.openrdf.query.BindingSet
-import org.openrdf.query.QueryEvaluationException
 import org.openrdf.query.impl.EmptyBindingSet
 import org.scalatest.FlatSpecLike
 import org.scalatest.Matchers

@@ -67,7 +67,7 @@ class BindingSetIteration(props: Props, uri: String, query: String, bindings: Bi
       case Result(bindings: BindingSet) => resultQueue.put(Some(bindings))
       case Done => {
         resultQueue.put(None)
-        context.system.shutdown();
+        context.system.terminate();
       }
       case msg if sender != child => child forward msg
       case msg                    => log.warning(s"unknown message $msg")

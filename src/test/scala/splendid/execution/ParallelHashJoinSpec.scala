@@ -1,7 +1,8 @@
 package splendid.execution
 
-import scala.collection.JavaConversions.seqAsJavaList
-import scala.concurrent.duration.DurationInt
+import scala.collection.JavaConversions._
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 import org.openrdf.model.impl.ValueFactoryImpl
 import org.openrdf.query.BindingSet
@@ -27,8 +28,8 @@ class ParallelHashJoinSpec(_system: ActorSystem) extends TestKit(_system)
   def this() = this(ActorSystem("ParallelHashJoinSpec"))
 
   override def afterAll: Unit = {
-    system.shutdown()
-    system.awaitTermination(10.seconds)
+    system.terminate()
+    Await.result(system.whenTerminated, 10.seconds)
   }
 
   /**

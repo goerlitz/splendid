@@ -1,19 +1,21 @@
 package splendid.execution
 
-import akka.testkit.TestKit
-import akka.testkit.ImplicitSender
-import org.scalatest.BeforeAndAfterAll
-import akka.actor.ActorSystem
-import org.scalatest.Matchers
-import org.scalatest.FlatSpecLike
-import scala.concurrent.duration.DurationInt
-import akka.actor.Props
-import akka.testkit.TestActorRef
+import scala.collection.JavaConversions._
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
+import org.openrdf.model.impl.ValueFactoryImpl
 import org.openrdf.query.BindingSet
 import org.openrdf.query.impl.ListBindingSet
-import org.openrdf.model.impl.ValueFactoryImpl
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.FlatSpecLike
+import org.scalatest.Matchers
 
-import scala.collection.JavaConversions._
+import akka.actor.ActorSystem
+import akka.actor.Props
+import akka.testkit.ImplicitSender
+import akka.testkit.TestActorRef
+import akka.testkit.TestKit
 
 class ProjectionSpec(_system: ActorSystem) extends TestKit(_system)
     with ImplicitSender
@@ -24,8 +26,8 @@ class ProjectionSpec(_system: ActorSystem) extends TestKit(_system)
   def this() = this(ActorSystem("ParallelHashJoinSpec"))
 
   override def afterAll: Unit = {
-    system.shutdown()
-    system.awaitTermination(10.seconds)
+    system.terminate()
+    Await.result(system.whenTerminated, 10.seconds)
   }
 
   trait ActorSetup {

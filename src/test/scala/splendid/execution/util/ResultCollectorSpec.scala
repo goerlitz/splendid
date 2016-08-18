@@ -31,7 +31,7 @@ class ResultCollectorSpec extends TestKit(ActorSystem("IterationTest"))
   implicit val timeout = Timeout(5 seconds) // required for '?'
   implicit val context = scala.concurrent.ExecutionContext.global
 
-  override def afterAll: Unit = system.shutdown()
+  override def afterAll: Unit = system.terminate()
 
   private def expectTimeout(f: Future[Any]): Future[Any] = {
     intercept[TimeoutException] { Await.result(f, 0.3 seconds) }

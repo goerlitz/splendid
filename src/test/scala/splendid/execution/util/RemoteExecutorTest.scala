@@ -1,7 +1,7 @@
 package splendid.execution.util
 
-import scala.concurrent.duration.DurationInt
-import scala.language.postfixOps
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 import org.openrdf.query.BindingSet
 import org.openrdf.query.QueryEvaluationException
@@ -37,8 +37,8 @@ class RemoteExecutorTest extends TestKit(ActorSystem("RemoteExecutor"))
 
   override def afterAll(): Unit = {
     //    testEndpoint.stop()
-    system.shutdown()
-    system.awaitTermination(10 seconds)
+    system.terminate()
+    Await.result(system.whenTerminated, 10.seconds)
   }
 
   "A RemoteExecutor" when {

@@ -1,6 +1,7 @@
 package splendid.execution
 
-import scala.concurrent.duration.DurationInt
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 import org.openrdf.query.BindingSet
 import org.openrdf.query.QueryEvaluationException
@@ -14,6 +15,7 @@ import akka.actor.ActorSystem
 import akka.actor.Props
 import akka.testkit.ImplicitSender
 import akka.testkit.TestKit
+
 import splendid.common.RDF
 import splendid.execution.util.ResultCollector.Done
 import splendid.execution.util.ResultCollector.Result
@@ -39,8 +41,8 @@ class RemoteQuerySpec extends TestKit(ActorSystem("RemoteQuerySpec"))
 
   override def afterAll(): Unit = {
     //    testEndpoint.stop()
-    system.shutdown()
-    system.awaitTermination(10.seconds)
+    system.terminate()
+    Await.result(system.whenTerminated, 10.seconds)
   }
 
   /**
