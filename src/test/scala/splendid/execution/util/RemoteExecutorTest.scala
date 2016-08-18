@@ -76,14 +76,14 @@ class RemoteExecutorTest extends TestKit(ActorSystem("RemoteExecutor"))
 
     s"given '$ASK_PRED'" should {
 
-      "return true if no bindings are applied" ignore {
+      "return true if no bindings are applied" in {
         evalQuery(EndpointUri, ASK_PRED, EmptyBindings)
 
         expectMsg(BooleanResult(true))
         expectMsg(EndOfData)
       }
 
-      "return true if a predicate binding is applied (variable is replaced)" ignore {
+      "return true if a predicate binding is applied (variable is replaced)" in {
         val p = SparqlResult.bindings("p" -> RDF.URI(TestData.AllPredicates.head))
         evalQuery(EndpointUri, ASK_PRED, p)
 
@@ -91,7 +91,7 @@ class RemoteExecutorTest extends TestKit(ActorSystem("RemoteExecutor"))
         expectMsg(EndOfData)
       }
 
-      "return true if no bindings can be applied (wrong variable)" ignore {
+      "return true if no bindings can be applied (wrong variable)" in {
         val s = SparqlResult.bindings("s" -> RDF.URI(TestData.AllSubjects.head))
         evalQuery(EndpointUri, ASK_PRED, s)
 

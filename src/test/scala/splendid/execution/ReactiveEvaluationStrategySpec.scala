@@ -69,8 +69,8 @@ class ReactiveEvaluationStrategySpec extends FlatSpecLike with BeforeAndAfterAll
       ("p", RDF.URI("http://xmlns.com/foaf/0.1/name")))
     val results = eval(query, endpointBinding)
 
-    // TODO check if DISTINCT ?p should really return ?endpoint of BindingSet
-    expectBindings(results, Seq(endpointBinding))
+    val predicateBinding = SparqlResult.bindings(("p", RDF.URI("http://xmlns.com/foaf/0.1/name")))
+    expectBindings(results, Seq(predicateBinding))
   }
 
   "A Join query" should "return all predicate bindings" in {

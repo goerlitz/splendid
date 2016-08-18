@@ -4,7 +4,7 @@ import scala.collection.JavaConversions._
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-import org.openrdf.model.impl.ValueFactoryImpl
+import org.openrdf.model.impl.SimpleValueFactory
 import org.openrdf.query.BindingSet
 import org.openrdf.query.impl.EmptyBindingSet
 import org.openrdf.query.impl.ListBindingSet
@@ -40,7 +40,7 @@ class ParallelHashJoinSpec(_system: ActorSystem) extends TestKit(_system)
     val rightSource = TestActorRef(Props[OperatorNode])
     val collector = TestActorRef[ResultSet](Props[ResultSet])
 
-    val fac = new ValueFactoryImpl
+    val fac = SimpleValueFactory.getInstance
 
     def bindings(tuples: (String, Any)*): BindingSet = {
       val (names, values) = tuples.unzip

@@ -2,10 +2,10 @@ package splendid.execution
 
 import org.openrdf.model.Resource
 import org.openrdf.model.Statement
-import org.openrdf.model.URI
+import org.openrdf.model.IRI
 import org.openrdf.model.Value
 import org.openrdf.model.ValueFactory
-import org.openrdf.model.impl.ValueFactoryImpl
+import org.openrdf.model.impl.SimpleValueFactory
 import org.openrdf.query.BindingSet
 import org.openrdf.query.QueryEvaluationException
 import org.openrdf.query.algebra.Join
@@ -13,7 +13,7 @@ import org.openrdf.query.algebra.Service
 import org.openrdf.query.algebra.TupleExpr
 import org.openrdf.query.algebra.evaluation.TripleSource
 import org.openrdf.query.algebra.evaluation.federation.FederatedServiceResolverImpl
-import org.openrdf.query.algebra.evaluation.impl.EvaluationStrategyImpl
+import org.openrdf.query.algebra.evaluation.impl.SimpleEvaluationStrategy
 
 import akka.actor.ActorSystem
 import akka.actor.Props
@@ -35,12 +35,12 @@ object ReactiveEvaluationStrategy {
    */
   private object EmptyTripleSource extends TripleSource {
     @throws(classOf[QueryEvaluationException])
-    override def getStatements(subj: Resource, pred: URI, obj: Value, contexts: Resource*): StatementIteration = new EmptyIteration()
-    override def getValueFactory(): ValueFactory = ValueFactoryImpl.getInstance
+    override def getStatements(subj: Resource, pred: IRI, obj: Value, contexts: Resource*): StatementIteration = new EmptyIteration()
+    override def getValueFactory(): ValueFactory = SimpleValueFactory.getInstance
   }
 }
 
-class ReactiveEvaluationStrategy private (tripleSource: TripleSource) extends EvaluationStrategyImpl(tripleSource, new FederatedServiceResolverImpl()) {
+class ReactiveEvaluationStrategy private (tripleSource: TripleSource) extends SimpleEvaluationStrategy(tripleSource, new FederatedServiceResolverImpl()) {
 
   import ReactiveEvaluationStrategy._
 
