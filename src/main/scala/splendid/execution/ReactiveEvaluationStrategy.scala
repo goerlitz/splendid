@@ -8,15 +8,12 @@ import org.openrdf.model.ValueFactory
 import org.openrdf.model.impl.ValueFactoryImpl
 import org.openrdf.query.BindingSet
 import org.openrdf.query.QueryEvaluationException
-import org.openrdf.query.QueryLanguage
 import org.openrdf.query.algebra.Join
 import org.openrdf.query.algebra.Service
 import org.openrdf.query.algebra.TupleExpr
 import org.openrdf.query.algebra.evaluation.TripleSource
 import org.openrdf.query.algebra.evaluation.federation.FederatedServiceResolverImpl
 import org.openrdf.query.algebra.evaluation.impl.EvaluationStrategyImpl
-import org.openrdf.query.impl.EmptyBindingSet
-import org.openrdf.query.parser.QueryParserUtil
 
 import akka.actor.ActorSystem
 import akka.actor.Props

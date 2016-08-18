@@ -8,7 +8,6 @@ import org.openrdf.query.BindingSet
 import org.openrdf.query.impl.EmptyBindingSet
 import org.openrdf.query.impl.ListBindingSet
 import org.scalatest.BeforeAndAfterAll
-import org.scalatest.Finders
 import org.scalatest.FlatSpecLike
 import org.scalatest.Matchers
 

@@ -1,12 +1,11 @@
 package splendid.execution
 
-import org.openrdf.query.algebra.ProjectionElemList
-import akka.actor.ActorRef
-import org.openrdf.query.BindingSet
 import scala.collection.JavaConversions._
-import org.openrdf.query.algebra.ProjectionElem
-import scala.collection.mutable.Buffer
+
+import org.openrdf.query.BindingSet
 import org.openrdf.query.impl.ListBindingSet
+
+import akka.actor.ActorRef
 
 class ProjectionImpl(projElements: Set[String], child: ActorRef, parent: ActorRef) extends OperatorImpl(parent) {
 

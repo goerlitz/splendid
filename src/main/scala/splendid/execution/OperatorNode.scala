@@ -1,13 +1,15 @@
 package splendid.execution
 
+import scala.collection.JavaConversions._
+
 import org.openrdf.query.BindingSet
 import org.openrdf.query.QueryLanguage
 import org.openrdf.query.algebra.Join
-import org.openrdf.query.algebra.Service
+import org.openrdf.query.algebra.Projection
 import org.openrdf.query.algebra.TupleExpr
-import org.openrdf.query.algebra.Union
 import org.openrdf.query.impl.EmptyBindingSet
 import org.openrdf.query.parser.QueryParserUtil
+
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
@@ -15,9 +17,6 @@ import akka.actor.ActorSystem
 import akka.actor.Props
 import akka.actor.Status
 import akka.actor.actorRef2Scala
-import scala.collection.JavaConversions._
-import akka.actor.ActorContext
-import org.openrdf.query.algebra.Projection
 
 case class TupleExprOp(expr: TupleExpr, bindings: BindingSet)
 case class TupleResult(bindings: BindingSet)

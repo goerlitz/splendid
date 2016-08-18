@@ -50,8 +50,8 @@ class ResultCollector private (rootOpProps: Option[Props]) extends Actor with St
   }
 
   def collecting: Actor.Receive = {
-    case HasNext       => if (queue.isEmpty) stash else sender ! true
-    case GetNext       => if (queue.isEmpty) stash else sender ! queue.dequeue
+    case HasNext       => if (queue.isEmpty) { stash } else { sender ! true }
+    case GetNext       => if (queue.isEmpty) { stash } else { sender ! queue.dequeue }
     case Done          => unstashAll; context become serving
     case value: Result => unstashAll; queue += value
     case x             => log.warning(s"unexpected message: $x\n")
@@ -63,5 +63,5 @@ class ResultCollector private (rootOpProps: Option[Props]) extends Actor with St
     case x       => log.warning(s"unexpected message: $x\n")
   }
 
-  def receive = collecting
+  def receive: Actor.Receive = collecting
 }
